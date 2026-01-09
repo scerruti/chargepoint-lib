@@ -20,7 +20,7 @@ def should_charge_now():
 
 
 def charge():
-    """Main charging logic. Returns True on success, False on failure."""
+    """Main charging logic with wait-for-scheduled-charging-to-end. Returns True on success, False on failure."""
     username = os.environ.get("CP_USERNAME")
     password = os.environ.get("CP_PASSWORD")
     station_id = os.environ.get("CP_STATION_ID")
@@ -47,36 +47,77 @@ def charge():
         charger_id = chargers[0]
         print(f"✓ Found charger: {charger_id}")
         
-        # Check charger status
+        # Step 1: Check if car is plugged in
         status = client.get_home_charger_status(charger_id)
-        print(f"📊 Charger Status:")
+        print(f"📊 Initial Status:")
         print(f"   Connected: {status.connected}")
         print(f"   Plugged In: {status.plugged_in}")
-        print(f"   Model: {status.model}")
-        print(f"   Last Connected: {status.last_connected_at}")
+        print(f"   Charging Status: {status.charging_status}")
         
         if not status.connected:
-            print("⚠️  WARNING: Charger is offline (not connected to network)")
-            print("   Charging cannot start until charger reconnects")
+            print("⚠️  Charger is offline - exiting")
             return False
         
         if not status.plugged_in:
-            print("⚠️  WARNING: No vehicle plugged in")
-            print("   Charging cannot start until vehicle is connected")
-            return False
+            print("ℹ️  No vehicle plugged in - nothing to do")
+            return True  # Success: nothing wrong, just nothing to charge
         
-        # Start charging session
-        print(f"⚡ Starting charging session for station {station_id}...")
-        try:
-            client.start_charging_session(station_id)
-            print("✅ SUCCESS: Charging session started!")
-            return True
-        except ChargePointCommunicationException as timeout_error:
-            if "failed to start in time allotted" in str(timeout_error).lower():
-                print("⚠️  WARNING: API timed out, but charging likely started anyway")
-                return True  # Treat as success since this is expected
+        # Step 2: Wait for scheduled charging to end (up to 4 minutes)
+        if status.charging_status == "CHARGING":
+            print("\n⏳ Scheduled charging detected - waiting for it to end...")
+            for attempt in range(1, 13):  # 12 attempts = 4 minutes
+                print(f"   Wait check {attempt}/12 (20s intervals)...")
+                time.sleep(20)
+                
+                status = client.get_home_charger_status(charger_id)
+                
+                # Check if unplugged during wait
+                if not status.plugged_in:
+                    print("ℹ️  Vehicle unplugged during wait - exiting")
+                    return True
+                
+                # Check if charging stopped
+                if status.charging_status != "CHARGING":
+                    print(f"✓ Scheduled charging ended (status: {status.charging_status})")
+                    break
             else:
-                raise
+                # Still charging after 12 checks
+                print("ℹ️  Scheduled charging still active after 4 minutes")
+                print("   (May be a holiday or extended schedule - exiting)")
+                return True  # Success: scheduled charging still running, that's fine
+        
+        # Step 3: Start charging (with retry logic for timeouts)
+        print(f"\n⚡ Starting charging session for station {station_id}...")
+        
+        for retry in range(1, 4):  # Up to 3 attempts
+            try:
+                client.start_charging_session(station_id)
+                print("✅ SUCCESS: Charging session started!")
+                return True
+                
+            except ChargePointCommunicationException as timeout_error:
+                if "failed to start in time allotted" in str(timeout_error).lower():
+                    print(f"⚠️  Timeout on attempt {retry}/3 - checking if charging started...")
+                    time.sleep(20)
+                    
+                    status = client.get_home_charger_status(charger_id)
+                    
+                    if not status.plugged_in:
+                        print("ℹ️  Vehicle unplugged - exiting")
+                        return True
+                    
+                    if status.charging_status == "CHARGING":
+                        print("✅ Charging confirmed active (timeout was expected)")
+                        return True
+                    
+                    if retry < 3:
+                        print(f"   Charging not detected, retrying ({retry}/3)...")
+                        continue
+                    else:
+                        print("❌ ERROR: 3 attempts failed, charging not confirmed")
+                        return False
+                else:
+                    raise  # Other communication errors
         
     except ChargePointCommunicationException as e:
         print(f"❌ ERROR: ChargePoint API communication failed")

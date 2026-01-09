@@ -85,7 +85,6 @@ jobs:
             # Optional: Send email notification
             if alert_email:
                 print(f"ℹ️  Alert email configured for {alert_email}")
-                print("   (Email sending not implemented - use IFTTT for Google Home)")
             
             print("\n" + "=" * 60)
             print("✅ Notification process completed")

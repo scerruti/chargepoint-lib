@@ -219,6 +219,14 @@ def retrain_and_validate():
 - Won't deploy if accuracy drops >5%
 - Keeps backup of previous model
 - Shows confusion matrix before deployment
+- **Runs label validation after training:**
+  - Detects sessions where model disagrees with manual labels
+  - Flags suspicious labels for review
+  - Reports: "Found 2 suspicious labels - review recommended"
+- **Excludes flagged sessions from training:**
+  - Sessions marked `needs_review: true` are excluded
+  - Ensures training data quality
+  - User must confirm or correct before re-inclusion
 
 ---
 
@@ -298,18 +306,33 @@ def retrain_and_validate():
   - Generates report: "X unclassified sessions need labeling"
   - Includes direct link to label.html with filtered view
   - Creates GitHub issue or sends summary email
+- [ ] **Add mislabeling detection system:**
+  - Cross-validation to detect label disagreements
+  - Flag sessions where model confidence >85% but disagrees with manual label
+  - Outlier detection in feature space (sessions far from their cluster)
+  - Add `needs_review`, `classifier_disagreement` flags to session data
+- [ ] **Create "Suspicious Labels" section in label.html:**
+  - Display flagged sessions with both labels
+  - Show power consumption graph vs typical pattern
+  - Options: "Confirm Correct", "Change to Model Prediction", "Mark as Outlier"
+  - Track corrections with `corrected_by_model` label source
 - [ ] Monitor classification accuracy
-- [ ] Collect misclassified examples
+- [ ] Collect misclassified examples and edge cases
 - [ ] **Automated retraining workflow:**
   - Triggered by "Retrain" button in label.html
-  - Fetches all labeled sessions
+  - Fetches all labeled sessions (excluding those flagged for review)
   - Extracts features and trains new model
   - Validates on test set (reports accuracy)
+  - Runs label validation to detect new suspicious sessions
   - Auto-deploys if accuracy improves
-  - Notifies user of results
+  - Notifies user of results and any suspicious labels found
 - [ ] Add confidence scores to predictions
 - [ ] Alert on low-confidence classifications (add to "needs review" list)
 - [ ] Implement active learning (manual review of uncertain cases)
+- [ ] **Add label quality metrics:**
+  - % of labels that match model predictions
+  - Distribution of model confidence on manual labels
+  - Track correction rate over time
 
 ---
 
@@ -399,22 +422,36 @@ def retrain_and_validate():
       "vehicle_id": "serenity_equinox_2024",
       "labeled_at": "2026-01-10T08:30:00Z",
       "labeled_by": "manual",
-      "confidence": 1.0
+      "confidence": 1.0,
+      "needs_review": false
     },
     "123457": {
       "vehicle_id": "volvo_xc40_2021",
       "labeled_at": "2026-01-10T08:31:00Z",
       "labeled_by": "classifier",
-      "confidence": 0.92
+      "confidence": 0.92,
+      "needs_review": false
+    },
+    "123458": {
+      "vehicle_id": "serenity_equinox_2024",
+      "labeled_at": "2026-01-10T09:00:00Z",
+      "labeled_by": "manual",
+      "confidence": 1.0,
+      "needs_review": true,
+      "classifier_disagreement": true,
+      "classifier_prediction": "volvo_xc40_2021",
+      "classifier_confidence": 0.91,
+      "review_reason": "Model strongly disagrees with manual label"
     }
   },
-  "unknown_sessions": [123458, 123459],
+  "unknown_sessions": [123459, 123460],
   "statistics": {
-    "total_sessions": 4,
-    "labeled_sessions": 2,
-    "serenity_equinox_2024": 1,
+    "total_sessions": 5,
+    "labeled_sessions": 3,
+    "serenity_equinox_2024": 2,
     "volvo_xc40_2021": 1,
-    "unknown": 2
+    "unknown": 2,
+    "needs_review": 1
   }
 }
 ```
@@ -494,6 +531,9 @@ def retrain_and_validate():
 | **API rate limits** | Data collection fails | Add backoff, cache responses |
 | **Model drift over time** | Accuracy degrades | Monitor, retrain quarterly |
 | **Battery conditioning affects profile** | Misclassification | Collect diverse seasonal data |
+| **Mislabeled training data** | Poor classifier performance | Cross-validation detection, flag for review |
+| **User labels wrong vehicle** | Training on bad data | Visual comparison, suspicious label alerts |
+| **Edge cases (cold weather, low SOC)** | Unusual patterns cause errors | Allow "Uncertain" option, track notes |
 
 ---
 

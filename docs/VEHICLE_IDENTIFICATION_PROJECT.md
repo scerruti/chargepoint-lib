@@ -156,6 +156,72 @@ Dashboard shows per-vehicle stats
 
 ---
 
+## Key Features
+
+### Weekly Unclassified Sessions Report
+**Purpose:** Prompt timely labeling of unknown sessions
+
+**Implementation:**
+```yaml
+# .github/workflows/weekly-unclassified-report.yml
+schedule:
+  - cron: '0 20 * * 0'  # Sunday 8 PM PT
+```
+
+**Report Contents:**
+- Count of unclassified sessions from past 7 days
+- List with date, time, and session ID
+- Direct link to label.html with filter: `?filter=unlabeled`
+- Summary statistics (% labeled vs unlabeled)
+
+**Delivery Options:**
+1. GitHub Issue (automated, trackable)
+2. Email via GitHub Actions
+3. Slack/Discord webhook notification
+
+### One-Click Classifier Retraining
+**Purpose:** Immediately improve classifier with newly labeled data
+
+**User Flow:**
+1. User labels 5+ new sessions in label.html
+2. Clicks "Retrain Classifier" button
+3. Workflow triggered via GitHub Actions API
+4. Training completes in 2-5 minutes
+5. Results displayed: accuracy, precision, recall
+6. User confirms deployment or cancels
+
+**Implementation:**
+```python
+# retrain_classifier.py
+def retrain_and_validate():
+    # Load labeled sessions
+    sessions = load_labeled_sessions()
+    
+    # Split train/test
+    X_train, X_test, y_train, y_test = train_test_split(...)
+    
+    # Train new model
+    new_model = train_model(X_train, y_train)
+    
+    # Evaluate
+    accuracy = new_model.score(X_test, y_test)
+    
+    # Compare to current model
+    if accuracy > current_accuracy:
+        save_model(new_model)
+        return {"status": "improved", "accuracy": accuracy}
+    else:
+        return {"status": "declined", "accuracy": accuracy}
+```
+
+**Safety Features:**
+- Requires minimum 10 labeled sessions per vehicle
+- Won't deploy if accuracy drops >5%
+- Keeps backup of previous model
+- Shows confusion matrix before deployment
+
+---
+
 ## Implementation Plan
 
 ### Week 1-2: Session Monitoring Infrastructure
@@ -215,14 +281,34 @@ Dashboard shows per-vehicle stats
 - [ ] Update `data/runs.json` schema to include `vehicle_id`
 - [ ] Update dashboard to filter by vehicle
 - [ ] Add vehicle selection dropdown to dashboard
+- [ ] **Add weekly summary workflow:**
+  - Check for unclassified sessions
+  - Generate summary report with link to labeling portal
+  - Email or create issue if unclassified sessions exist
+- [ ] **Add "Retrain Classifier" button to label.html:**
+  - Triggers workflow to retrain model with new labels
+  - Shows training progress and accuracy metrics
+  - Auto-deploys updated classifier
 - [ ] Test end-to-end: new session → classification → dashboard
 
 ### Week 10+: Refinement & Monitoring
+- [ ] **Implement weekly report workflow:**
+  - Runs Sunday evenings
+  - Counts unclassified sessions from past week
+  - Generates report: "X unclassified sessions need labeling"
+  - Includes direct link to label.html with filtered view
+  - Creates GitHub issue or sends summary email
 - [ ] Monitor classification accuracy
 - [ ] Collect misclassified examples
-- [ ] Retrain model periodically
+- [ ] **Automated retraining workflow:**
+  - Triggered by "Retrain" button in label.html
+  - Fetches all labeled sessions
+  - Extracts features and trains new model
+  - Validates on test set (reports accuracy)
+  - Auto-deploys if accuracy improves
+  - Notifies user of results
 - [ ] Add confidence scores to predictions
-- [ ] Alert on low-confidence classifications
+- [ ] Alert on low-confidence classifications (add to "needs review" list)
 - [ ] Implement active learning (manual review of uncertain cases)
 
 ---
@@ -418,6 +504,15 @@ Dashboard shows per-vehicle stats
 - Multi-vehicle detection (if both vehicles charge same day)
 - Anomaly detection (unusual charging patterns)
 - Predictive maintenance (detect charger issues)
+- **Weekly digest email with:**
+  - Total sessions per vehicle
+  - Energy usage per vehicle
+  - Cost breakdown per vehicle
+  - Unclassified sessions alert with link to labeling portal
+- **One-click model retraining:**
+  - Button in label.html
+  - Shows training metrics before deployment
+  - Rollback capability if accuracy drops
 
 ### V3: Integration
 - Mobile app integration

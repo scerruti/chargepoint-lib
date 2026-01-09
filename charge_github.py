@@ -14,31 +14,23 @@ from python_chargepoint.exceptions import ChargePointCommunicationException
 
 
 def wait_until_charge_window():
-    """Wait until 6:00 AM Pacific if invoked early (e.g., 5 AM)."""
+    """If run before 5:59 AM PT, sleep until exactly 5:59 AM PT."""
     pacific = ZoneInfo("America/Los_Angeles")
     now = datetime.now(pacific)
+    target = now.replace(hour=5, minute=59, second=0, microsecond=0)
 
-    # If already past 6, skip for today
-    if now.hour > 6:
-        print(f"ℹ️  Past charging window (current hour: {now.hour}, target: 6) - exiting")
+    # If already at/after 5:59 AM PT, only proceed if before 6:05 AM, otherwise exit
+    if now >= target:
+        if now.hour == 5 or (now.hour == 6 and now.minute < 5):
+            return True
+        print(f"ℹ️  Past charging window (current local time: {now.strftime('%H:%M')}, target: 05:59) - exiting")
         return False
 
-    # If exactly 6, proceed
-    if now.hour == 6:
-        return True
-
-    # If 5 AM, wait until 6:00 AM Pacific
-    if now.hour == 5:
-        target = now.replace(hour=6, minute=0, second=0, microsecond=0)
-        wait_seconds = (target - now).total_seconds()
-        if wait_seconds > 0:
-            print(f"⏳ Waiting until 6:00 AM PT ({int(wait_seconds)}s)...")
-            time.sleep(wait_seconds)
-        return True
-
-    # Any other hour (should not happen with our cron), exit
-    print(f"ℹ️  Not charging window (current hour: {now.hour}, target: 6) - exiting")
-    return False
+    # Wait until 5:59 AM PT
+    wait_seconds = (target - now).total_seconds()
+    print(f"⏳ Early start detected, waiting {int(wait_seconds)}s until 5:59 AM PT...")
+    time.sleep(wait_seconds)
+    return True
 
 
 def charge():
@@ -84,11 +76,11 @@ def charge():
             print("ℹ️  No vehicle plugged in - nothing to do")
             return True  # Success: nothing wrong, just nothing to charge
         
-        # Step 2: Wait for scheduled charging to end (up to 4 minutes)
+        # Step 2: Wait for scheduled charging to end (up to 5 minutes)
         if status.charging_status == "CHARGING":
             print("\n⏳ Scheduled charging detected - waiting for it to end...")
-            for attempt in range(1, 13):  # 12 attempts = 4 minutes
-                print(f"   Wait check {attempt}/12 (20s intervals)...")
+            for attempt in range(1, 16):  # 15 attempts = 5 minutes
+                print(f"   Wait check {attempt}/15 (20s intervals)...")
                 time.sleep(20)
                 
                 status = client.get_home_charger_status(charger_id)

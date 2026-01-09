@@ -37,7 +37,6 @@ function renderSummary(runs) {
     const successful = runs.filter(r => r.result === 'success').length;
     const failed = runs.filter(r => r.result === 'failure').length;
     const other = runs.filter(r => r.result === 'other').length;
-    const other = runs.filter(r => r.result === 'other').length;
     const effective = Math.max(1, successful + failed); // avoid divide-by-zero; treat "other" as neutral
     const successRate = ((successful / effective) * 100).toFixed(1);
     
@@ -111,6 +110,7 @@ function renderSummary(runs) {
 function renderSuccessChart(runs) {
     const successful = runs.filter(r => r.result === 'success').length;
     const failed = runs.filter(r => r.result === 'failure').length;
+    const other = runs.filter(r => r.result === 'other').length;
     
     const ctx = document.getElementById('successChart').getContext('2d');
     new Chart(ctx, {

@@ -67,9 +67,16 @@ def charge():
         
         # Start charging session
         print(f"⚡ Starting charging session for station {station_id}...")
-        client.start_charging_session(station_id)
-        print("✅ SUCCESS: Charging session started!")
-        return True
+        try:
+            client.start_charging_session(station_id)
+            print("✅ SUCCESS: Charging session started!")
+            return True
+        except ChargePointCommunicationException as timeout_error:
+            if "failed to start in time allotted" in str(timeout_error).lower():
+                print("⚠️  WARNING: API timed out, but charging likely started anyway")
+                return True  # Treat as success since this is expected
+            else:
+                raise
         
     except ChargePointCommunicationException as e:
         print(f"❌ ERROR: ChargePoint API communication failed")

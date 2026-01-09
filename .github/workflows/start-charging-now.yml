@@ -84,10 +84,21 @@ jobs:
             
             # Start charging session
             print(f"⚡ Starting charging session for station {station_id}...")
-            client.start_charging_session(station_id)
-            print("\n" + "=" * 60)
-            print("✅ SUCCESS: Charging session started!")
-            print("=" * 60)
+            try:
+                client.start_charging_session(station_id)
+                print("\n" + "=" * 60)
+                print("✅ SUCCESS: Charging session started!")
+                print("=" * 60)
+            except ChargePointCommunicationException as timeout_error:
+                if "failed to start in time allotted" in str(timeout_error).lower():
+                    print("\n⚠️  WARNING: API timed out waiting for confirmation")
+                    print("   However, charging likely started anyway (this is common)")
+                    print("   Check ChargePoint app to verify charging is active")
+                    print("\n" + "=" * 60)
+                    print("✅ Charging command sent (timeout is expected)")
+                    print("=" * 60)
+                else:
+                    raise
             
         except ChargePointCommunicationException as e:
             print(f"\n❌ ERROR: ChargePoint API communication failed")

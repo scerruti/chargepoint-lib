@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Standing on Community Shoulders - CPH50 Control Blog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        header h1 { margin-bottom: 10px; font-size: 2.5em; }
+        .post-meta { opacity: 0.9; font-size: 0.95em; }
+        nav {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+        }
+        nav a:hover { text-decoration: underline; }
+        article {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        article h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            font-size: 1.8em;
+        }
+        article h3 {
+            color: #764ba2;
+            margin: 25px 0 10px 0;
+            font-size: 1.4em;
+        }
+        article p { margin-bottom: 15px; }
+        article ul, article ol { margin: 15px 0 15px 30px; }
+        article li { margin-bottom: 8px; }
+        article code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        article pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        article pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        article blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
+        }
+        .tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        .community-link {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Standing on Community Shoulders</h1>
+            <div class="post-meta">
+                📅 January 9, 2026 | 
+                <span class="tag">open-source</span>
+                <span class="tag">api</span>
+                <span class="tag">community</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="../../index.html">Dashboard</a>
+            <a href="../../label-simple.html">Labeling Portal</a>
+            <a href="../index.html">← Back to Blog</a>
+        </nav>
+
+        <article>
+            <p>ChargePoint doesn't offer a public API. There's no developer portal, no OAuth flow, no REST documentation. And yet, thousands of Home Assistant users have ChargePoint integrations. Smart home enthusiasts trigger charging based on solar production. Automation nerds (like me) wanted to script charging sessions.</p>
+
+            <p>How? The community reverse-engineered it.</p>
+
+            <h2>The python-chargepoint Library</h2>
+
+            <p>When I started researching, I found <code>python-chargepoint</code> by <a href="https://github.com/mbillow/python-chargepoint" style="color: #667eea;">@mbillow</a>. This library is the foundation for nearly every ChargePoint home automation project.</p>
+
+            <div class="community-link">
+                <strong>🙏 Community Debt:</strong> Without <code>python-chargepoint</code>, this project wouldn't exist. The library documents the mobile app's authentication flow, endpoint URLs, and session management.
+            </div>
+
+            <p>The library showed me:</p>
+
+            <ul>
+                <li><strong>Authentication endpoint:</strong> <code>POST https://account.chargepoint.com/account/v1/driver/auth/login</code></li>
+                <li><strong>Session start endpoint:</strong> <code>POST https://mc.chargepoint.com/map-prod/v2</code></li>
+                <li><strong>Required headers:</strong> User-Agent spoofing to look like the mobile app</li>
+                <li><strong>Token handling:</strong> Capturing <code>access_token</code> and <code>Set-Cookie</code> headers</li>
+            </ul>
+
+            <p>This wasn't guesswork. Someone had painstakingly watched network traffic from the ChargePoint mobile app, documented the requests, and packaged it into a usable Python library.</p>
+
+            <h2>The Legacy NA Shard Discovery</h2>
+
+            <p>But when I tried to use those endpoints, I hit a wall: <code>404 Not Found</code>.</p>
+
+            <p>My account, it turns out, lives on ChargePoint's legacy North America shard (<code>na.chargepoint.com</code>) rather than the global endpoint (<code>account.chargepoint.com</code>). This is common for accounts created before ChargePoint's infrastructure consolidation.</p>
+
+            <p>Again, the community came through. Buried in GitHub issues and Home Assistant forum threads, I found others who'd debugged this exact problem:</p>
+
+            <pre><code>// Legacy NA Shard Endpoints
+POST https://na.chargepoint.com/users/validate
+POST https://na.chargepoint.com/home/start_session
+
+// Uses form-encoding instead of JSON
+Content-Type: application/x-www-form-urlencoded</code></pre>
+
+            <p>No official documentation explains this. But community members had reverse-engineered both the modern <em>and</em> legacy APIs, documenting the differences.</p>
+
+            <h2>The User-Agent Requirement</h2>
+
+            <p>Even with the correct endpoints, requests were failing with <code>403 Forbidden</code> or returning HTML error pages instead of JSON.</p>
+
+            <p>The issue? ChargePoint's API checks the <code>User-Agent</code> header. If you send a request that looks like it's coming from <code>curl</code> or a generic HTTP client, the server blocks it.</p>
+
+            <p>Community documentation revealed the magic string:</p>
+
+            <pre><code>User-Agent: ChargePoint/6.113.0 (com.chargepoint.mobile; build:1; iOS 16.0.0)</code></pre>
+
+            <p>With this header, the server accepts requests. Without it, you get errors or HTML 404 pages. This detail was <strong>only</strong> documented through community trial and error.</p>
+
+            <h2>The Station ID Format Mystery</h2>
+
+            <p>Even after authentication worked, I couldn't start a charging session. The API kept returning errors about an invalid station ID.</p>
+
+            <p>My CPH50 has a serial number on the physical label: <code>214541061163</code>. I assumed that was the station ID. Nope.</p>
+
+            <p>The legacy API expects a different format: <code>1:214541061163</code>.</p>
+
+            <p>The <code>1:</code> prefix is a namespace identifier. If you provide a raw serial number, the API interprets it as an internal database ID and returns <code>404 Not Found</code>. Add the prefix, and it works.</p>
+
+            <p>Again, this wasn't documented officially. I found it in GitHub issues from other developers who'd hit the same wall.</p>
+
+            <h2>The Cookie Encoding Detail</h2>
+
+            <p>One more subtle detail: my password contained a <code>#</code> character.</p>
+
+            <p>In URL-encoded form data (which the legacy API uses), <code>#</code> is a special character. If you don't escape it as <code>%23</code>, the server silently truncates the password and returns <code>"Invalid username or password"</code>.</p>
+
+            <p>Modern HTTP libraries handle this automatically. But when debugging with raw <code>curl</code> commands, you need to use <code>--data-urlencode</code> instead of <code>-d</code> to ensure special characters are escaped properly.</p>
+
+            <p>This detail? Also documented in community forum threads.</p>
+
+            <h2>Why This Matters</h2>
+
+            <p>Without the community's reverse-engineering work, I would have spent <em>weeks</em> debugging these issues:</p>
+
+            <ul>
+                <li>Discovering the NA shard vs. global shard split</li>
+                <li>Finding the correct form-encoding format for legacy endpoints</li>
+                <li>Figuring out the User-Agent requirement</li>
+                <li>Learning the <code>1:</code> station ID prefix convention</li>
+                <li>Debugging password special character encoding</li>
+            </ul>
+
+            <p>Instead, I spent a few hours reading documentation, GitHub issues, and forum posts. Every obstacle I hit, someone else had already documented the solution.</p>
+
+            <blockquote>
+                Open source isn't just about code—it's about shared knowledge. The <code>python-chargepoint</code> library and the community discussions around it saved me from reinventing the wheel.
+            </blockquote>
+
+            <h2>Contributing Back</h2>
+
+            <p>This blog series is my way of contributing back. If you're trying to automate a CPH50 and hit these same issues, hopefully this documentation saves <em>you</em> from debugging them from scratch.</p>
+
+            <p>And if you find new edge cases, document them. Share them. The next person will thank you.</p>
+
+            <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <p><strong>Series navigation:</strong> Prev → <a href="02-respecting-the-rate-plan.html" style="color: #667eea;">Respecting the Rate Plan</a> | Next → <a href="04-designing-with-ai-the-solution-space.html" style="color: #667eea;">Designing with AI: The Solution Space</a></p>
+        </article>
+
+        <footer>
+            <p>CPH50 Control Project &copy; 2026 | <a href="https://github.com/scerruti" style="color: #667eea;">@scerruti</a></p>
+        </footer>
+    </div>
+</body>
+</html>

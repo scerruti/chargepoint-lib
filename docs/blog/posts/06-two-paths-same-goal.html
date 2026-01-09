@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Two Paths, Same Goal - CPH50 Control Blog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        header h1 { margin-bottom: 10px; font-size: 2.5em; }
+        .post-meta { opacity: 0.9; font-size: 0.95em; }
+        nav {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+        }
+        nav a:hover { text-decoration: underline; }
+        article {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        article h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            font-size: 1.8em;
+        }
+        article h3 {
+            color: #764ba2;
+            margin: 25px 0 10px 0;
+            font-size: 1.4em;
+        }
+        article p { margin-bottom: 15px; }
+        article ul, article ol { margin: 15px 0 15px 30px; }
+        article li { margin-bottom: 8px; }
+        article blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
+        }
+        .compare {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .compare-card {
+            background: #eef2ff;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            border-radius: 4px;
+        }
+        @media (min-width: 720px) {
+            .compare { grid-template-columns: 1fr 1fr; }
+        }
+        .tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Two Paths, Same Goal</h1>
+            <div class="post-meta">
+                📅 January 9, 2026 | 
+                <span class="tag">comparison</span>
+                <span class="tag">diy</span>
+                <span class="tag">hardware-vs-software</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="../../index.html">Dashboard</a>
+            <a href="../../label-simple.html">Labeling Portal</a>
+            <a href="../index.html">← Back to Blog</a>
+        </nav>
+
+        <article>
+            <p>Nikki at Transport Evolved retrofitted a JuiceBox with OpenEVSE hardware and Node-RED to enable load-sharing and smarter scheduling. I extended a CPH50 with a serverless script. Different hardware, different skills, same goal: make home charging smarter.</p>
+
+            <h2>Context Differences</h2>
+
+            <div class="compare">
+                <div class="compare-card">
+                    <strong>Nikki's project</strong><br>
+                    320A service, multiple EVSEs, hardware retrofit, load-sharing focus.
+                </div>
+                <div class="compare-card">
+                    <strong>My project</strong><br>
+                    100A service, single CPH50, no hardware changes, schedule extension focus.
+                </div>
+            </div>
+
+            <h2>Skill Profiles</h2>
+
+            <ul>
+                <li><strong>Nikki:</strong> Hardware generalist, comfortable opening the EVSE, swapping boards, wiring CT clamps, using Node-RED for flows.</li>
+                <li><strong>Me:</strong> Software-first, TypeScript/AI workflows, zero hardware changes, cloud automation.</li>
+            </ul>
+
+            <h2>Approach Trade-offs</h2>
+
+            <ul>
+                <li><strong>Hardware retrofit:</strong> Gains deep control (pilot signal, per-phase monitoring), but requires safety diligence and physical modifications.</li>
+                <li><strong>API-layer automation:</strong> Non-invasive, leverages existing charger capabilities, but depends on reverse-engineered endpoints and uptime of the vendor APIs.</li>
+            </ul>
+
+            <h2>Common Ground</h2>
+
+            <ul>
+                <li>Both lean on community knowledge—OpenEVSE docs for Nikki; <code>python-chargepoint</code> and forum threads for me.</li>
+                <li>Both preserve something valuable: Nikki keeps her hardware investment; I keep Energy Price Plan scheduling.</li>
+                <li>Both add a safety valve: manual override still works (Charge Now in the app; physical controls on the EVSE).</li>
+            </ul>
+
+            <blockquote>
+                There is no single “right” way to extend a charger. Your constraints—service size, budget, trust model, and skills—decide the path.
+            </blockquote>
+
+            <h2>Why This Comparison Matters</h2>
+
+            <p>It's tempting to claim one approach is superior. The reality: they're optimized for different constraints. Watching Nikki's build validated that DIY energy projects are thriving across hardware and software. It also reinforced my design choice: zero hardware, keep the vendor scheduling, add one precise automation.</p>
+
+            <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <p><strong>Series navigation:</strong> Prev → <a href="05-ai-as-code-translator-and-debugger.html" style="color: #667eea;">AI as Code Translator & Debugger</a> | Next → <a href="07-data-collection-for-vehicle-intelligence.html" style="color: #667eea;">Data Collection for Vehicle Intelligence</a></p>
+        </article>
+
+        <footer>
+            <p>CPH50 Control Project &copy; 2026 | <a href="https://github.com/scerruti" style="color: #667eea;">@scerruti</a></p>
+        </footer>
+    </div>
+</body>
+</html>

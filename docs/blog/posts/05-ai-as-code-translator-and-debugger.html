@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI as Code Translator & Debugger - CPH50 Control Blog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        header h1 { margin-bottom: 10px; font-size: 2.5em; }
+        .post-meta { opacity: 0.9; font-size: 0.95em; }
+        nav {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+        }
+        nav a:hover { text-decoration: underline; }
+        article {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        article h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            font-size: 1.8em;
+        }
+        article h3 {
+            color: #764ba2;
+            margin: 25px 0 10px 0;
+            font-size: 1.4em;
+        }
+        article p { margin-bottom: 15px; }
+        article ul, article ol { margin: 15px 0 15px 30px; }
+        article li { margin-bottom: 8px; }
+        article pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 18px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        article pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        article blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
+        }
+        .tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI as Code Translator & Debugger</h1>
+            <div class="post-meta">
+                📅 January 9, 2026 | 
+                <span class="tag">ai</span>
+                <span class="tag">debugging</span>
+                <span class="tag">typescript</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="../../index.html">Dashboard</a>
+            <a href="../../label-simple.html">Labeling Portal</a>
+            <a href="../index.html">← Back to Blog</a>
+        </nav>
+
+        <article>
+            <p>Once the architecture was chosen (Cloudflare Workers), the challenge shifted to implementation details. I leaned on AI as a translator between the Python-centric community docs and the TypeScript/Workers runtime, and as a debugger for all the sharp edges hidden in HTTP minutiae.</p>
+
+            <h2>From Python Examples to TypeScript Workers</h2>
+
+            <p>Community examples are mostly Python. Workers run in a V8 isolate with a Web-standard API surface—no <code>requests</code>, no <code>fs</code>, no Node <code>Buffer</code>. AI helped map common patterns:</p>
+
+            <ul>
+                <li><strong>requests.post → fetch:</strong> JSON body for modern endpoints; URL-encoded form for legacy NA endpoints.</li>
+                <li><strong>requests.Session → manual cookie header:</strong> Capture <code>Set-Cookie</code> and forward it explicitly in the <code>Cookie</code> header.</li>
+                <li><strong>Python datetime → <code>Temporal</code> / <code>Intl</code> in Workers:</strong> Check <code>America/Los_Angeles</code> hour before acting.</li>
+            </ul>
+
+            <h2>Debugging the Sharp Edges (with AI in the loop)</h2>
+
+            <ol>
+                <li><strong>User-Agent enforcement:</strong> <code>ChargePoint/6.113.0 (com.chargepoint.mobile; build:1; iOS 16.0.0)</code> is required. Without it, the API returns HTML 404 or 403.</li>
+                <li><strong>Legacy NA shard:</strong> Modern docs say <code>account.chargepoint.com</code>; my account is on <code>na.chargepoint.com</code>. Different endpoints, form-encoding instead of JSON.</li>
+                <li><strong>Password encoding:</strong> <code>#</code> must be percent-escaped (<code>%23</code>) in form data. The fix was to use URLSearchParams or <code>--data-urlencode</code> in curl.</li>
+                <li><strong>Station ID format:</strong> Needs the <code>1:</code> prefix (e.g., <code>1:214541061163</code>). Raw serial numbers fail.</li>
+                <li><strong>WAF behaviors:</strong> ChargePoint sometimes returns HTML for errors. AI suggested logging the entire body on failure to catch hidden messages.</li>
+            </ol>
+
+            <p>Each of these was solved by pairing with AI: describe the symptom, paste the response, get a hypothesis, and test the fix. The loop time was minutes instead of hours.</p>
+
+            <h2>Building the Worker Skeleton</h2>
+
+            <pre><code class="language-typescript">export interface Env {
+  CP_USERNAME: string;
+  CP_PASSWORD: string;
+  CP_STATION_ID: string;
+  ALERT_EMAIL: string;
+  TZ_REGION: "America/Los_Angeles";
+}
+
+export default {
+  async scheduled(event, env, ctx) {
+    const now = new Date();
+    const hour = new Intl.DateTimeFormat("en-US", { timeZone: env.TZ_REGION, hour: "numeric", hour12: false }).format(now);
+    if (Number(hour) !== 6) return;
+
+    ctx.waitUntil(runStartCharge(env));
+  }
+};</code></pre>
+
+            <p>AI helped keep this tight and compliant with Workers constraints—no extraneous dependencies, all Web APIs.</p>
+
+            <h2>Retries and Alerting</h2>
+
+            <p>Another pattern I asked AI to draft: a retry wrapper with exponential backoff (2s, 4s, 8s) around both login and start_session calls, plus a MailChannels alert on final failure.</p>
+
+            <blockquote>
+                The biggest gain from AI wasn't generating boilerplate; it was shortening the diagnosis loop when an HTTP quirk or platform constraint surfaced.
+            </blockquote>
+
+            <h2>Outcome</h2>
+
+            <p>Weeks of reverse-engineering condensed into a day of paired debugging. The Worker now logs clearly, retries sensibly, and sends alerts when things go wrong—all while respecting the charger’s native scheduling.</p>
+
+            <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <p><strong>Series navigation:</strong> Prev → <a href="04-designing-with-ai-the-solution-space.html" style="color: #667eea;">Designing with AI: The Solution Space</a> | Next → <a href="06-two-paths-same-goal.html" style="color: #667eea;">Two Paths, Same Goal</a></p>
+        </article>
+
+        <footer>
+            <p>CPH50 Control Project &copy; 2026 | <a href="https://github.com/scerruti" style="color: #667eea;">@scerruti</a></p>
+        </footer>
+    </div>
+</body>
+</html>

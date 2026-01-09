@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Designing with AI: The Solution Space - CPH50 Control Blog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        header h1 { margin-bottom: 10px; font-size: 2.5em; }
+        .post-meta { opacity: 0.9; font-size: 0.95em; }
+        nav {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+        }
+        nav a:hover { text-decoration: underline; }
+        article {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        article h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            font-size: 1.8em;
+        }
+        article h3 {
+            color: #764ba2;
+            margin: 25px 0 10px 0;
+            font-size: 1.4em;
+        }
+        article p { margin-bottom: 15px; }
+        article ul, article ol { margin: 15px 0 15px 30px; }
+        article li { margin-bottom: 8px; }
+        article blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
+        }
+        .tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        .option {
+            background: #eef2ff;
+            border-left: 4px solid #667eea;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin: 12px 0;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Designing with AI: The Solution Space</h1>
+            <div class="post-meta">
+                📅 January 9, 2026 | 
+                <span class="tag">ai</span>
+                <span class="tag">design</span>
+                <span class="tag">architecture</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="../../index.html">Dashboard</a>
+            <a href="../../label-simple.html">Labeling Portal</a>
+            <a href="../index.html">← Back to Blog</a>
+        </nav>
+
+        <article>
+            <p>This project started as a design conversation with AI. I wanted to explore every viable option to extend charging past 6 AM without destroying the value of ChargePoint's Energy Price Plan scheduling. AI became a fast way to map the option space, quantify trade-offs, and make a decision grounded in constraints.</p>
+
+            <h2>Constraints on the Table</h2>
+
+            <ul>
+                <li><strong>Zero to near-zero cost:</strong> This should not require new hardware or a monthly bill.</li>
+                <li><strong>Trust boundary:</strong> Credentials should live with a provider I already trust. Cloudflare (paid customer) beats a random VPS.</li>
+                <li><strong>DST correctness:</strong> The job must fire at 6 AM Pacific, even across daylight saving transitions.</li>
+                <li><strong>Low power budget:</strong> No always-on PC or NUC drawing 10–30W.</li>
+                <li><strong>Schedule preservation:</strong> Charger keeps Energy Price Plan; automation adds a single 6 AM nudge.</li>
+            </ul>
+
+            <h2>Option Sweep (with AI as Copilot)</h2>
+
+            <div class="option">
+                <strong>Home Assistant + Add-on</strong><br>
+                Pros: Rich ecosystem, existing ChargePoint integrations.<br>
+                Cons: Needs hardware host; configuration overhead; overkill for a single cron action.
+            </div>
+
+            <div class="option">
+                <strong>ESP32 + Custom Firmware</strong><br>
+                Pros: Low power, DIY friendly.<br>
+                Cons: Hardware build, wiring to CPH50 relays, safety and warranty questions.
+            </div>
+
+            <div class="option">
+                <strong>Docker on a NUC / mini PC</strong><br>
+                Pros: Full Linux flexibility, easy cron.
+                Cons: Hardware cost, idle power draw, maintenance surface.
+            </div>
+
+            <div class="option">
+                <strong>Raspberry Pi</strong><br>
+                Pros: Lower power than NUC, lots of examples.
+                Cons: Still hardware to buy/maintain; SD card wear; timezone/DST management to own.
+            </div>
+
+            <div class="option">
+                <strong>GitHub Actions Scheduled Workflow</strong><br>
+                Pros: Free, already used earlier in the project.<br>
+                Cons: 15-minute schedule granularity; cron in UTC only; runner cold starts; token rotation management.
+            </div>
+
+            <div class="option">
+                <strong>Cloudflare Workers + Cron Triggers</strong><br>
+                Pros: Zero cost for this workload; cron accuracy; built-in time libraries; secrets in Wrangler; MailChannels email; runs in V8 isolate (no cold server to patch).<br>
+                Cons: No Node APIs (must be pure fetch/crypto); 10ms CPU bursts, so code must be lean.
+            </div>
+
+            <p>AI was the accelerator here. Instead of manually tabulating pros/cons, I asked AI to list constraints, filter options, and highlight hidden costs (like DST risk, power draw, token storage). That surfaced Cloudflare Workers as the cleanest fit.</p>
+
+            <h2>Why Cloudflare Workers Won</h2>
+
+            <ul>
+                <li><strong>Time zone sanity:</strong> Cron runs at 13:00 and 14:00 UTC; the Worker checks <code>America/Los_Angeles</code> and exits unless the local hour is 6. DST handled.</li>
+                <li><strong>Secrets and trust:</strong> Wrangler keeps <code>CP_USERNAME</code>, <code>CP_PASSWORD</code>, <code>CP_STATION_ID</code>, <code>ALERT_EMAIL</code> scoped to the Worker. No third-party server.</li>
+                <li><strong>Zero hardware:</strong> Nothing to power, patch, or monitor. The platform is already on my critical path (DNS, WAF), so I trust its operational stance.</li>
+                <li><strong>Built-in email:</strong> MailChannels is available for alerting without extra services.</li>
+            </ul>
+
+            <h2>How AI Shaped the Architecture</h2>
+
+            <p>Instead of a blank page, AI provided:</p>
+
+            <ul>
+                <li>Concrete cron expression: <code>0 13,14 * * *</code> to catch 6 AM Pacific year-round.</li>
+                <li>Reminder to double-check LA timezone in the Worker before acting.</li>
+                <li>Call stack outline: login → capture token/cookies → start_session → retry with backoff.</li>
+                <li>Platform guardrails: avoid Node APIs; rely on <code>fetch</code> and Web Crypto.</li>
+            </ul>
+
+            <blockquote>
+                The value of AI here wasn't writing every line of code—it was pruning dead ends and putting the right constraints on the table before I invested time.
+            </blockquote>
+
+            <h2>Decision Recorded</h2>
+
+            <p>With constraints honored and trade-offs compared, Cloudflare Workers became the obvious choice: serverless, zero-cost, time-zone aware, and already within my trust boundary. The next step was turning community knowledge into code.</p>
+
+            <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <p><strong>Series navigation:</strong> Prev → <a href="03-standing-on-community-shoulders.html" style="color: #667eea;">Standing on Community Shoulders</a> | Next → <a href="05-ai-as-code-translator-and-debugger.html" style="color: #667eea;">AI as Code Translator & Debugger</a></p>
+        </article>
+
+        <footer>
+            <p>CPH50 Control Project &copy; 2026 | <a href="https://github.com/scerruti" style="color: #667eea;">@scerruti</a></p>
+        </footer>
+    </div>
+</body>
+</html>

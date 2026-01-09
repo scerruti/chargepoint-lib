@@ -1,0 +1,100 @@
+name: Start Charging Now
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  charge-now:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install python-chargepoint
+    
+    - name: Start charging immediately
+      env:
+        CP_USERNAME: ${{ secrets.CP_USERNAME }}
+        CP_PASSWORD: ${{ secrets.CP_PASSWORD }}
+        CP_STATION_ID: ${{ secrets.CP_STATION_ID }}
+      run: |
+        python3 << 'EOF'
+        import os
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from python_chargepoint import ChargePoint
+        from python_chargepoint.exceptions import ChargePointCommunicationException
+
+        print("=" * 60)
+        print("Start Charging Now (Manual Trigger)")
+        print(f"UTC Time: {datetime.now(ZoneInfo('UTC')).strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        print(f"PST Time: {datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        print("=" * 60)
+
+        username = os.environ.get("CP_USERNAME")
+        password = os.environ.get("CP_PASSWORD")
+        station_id = os.environ.get("CP_STATION_ID")
+        
+        if not all([username, password, station_id]):
+            print("❌ ERROR: Missing required environment variables")
+            print("   Required: CP_USERNAME, CP_PASSWORD, CP_STATION_ID")
+            exit(1)
+
+        try:
+            print(f"\n🔐 Authenticating as {username}...")
+            client = ChargePoint(username=username, password=password)
+            print("✓ Authentication successful\n")
+            
+            print("🔍 Fetching home chargers...")
+            chargers = client.get_home_chargers()
+            
+            if not chargers:
+                print("❌ ERROR: No home chargers found")
+                exit(1)
+            
+            charger_id = chargers[0]
+            print(f"✓ Found charger: {charger_id}\n")
+            
+            # Check charger status
+            status = client.get_home_charger_status(charger_id)
+            print(f"📊 Charger Status:")
+            print(f"   Connected: {status.connected} {'✅' if status.connected else '❌'}")
+            print(f"   Plugged In: {status.plugged_in} {'✅' if status.plugged_in else '❌'}")
+            print(f"   Model: {status.model}")
+            print(f"   Last Connected: {status.last_connected_at}\n")
+            
+            if not status.connected:
+                print("❌ ERROR: Charger is offline (not connected to network)")
+                print("   Charging cannot start until charger reconnects")
+                exit(1)
+            
+            if not status.plugged_in:
+                print("⚠️  WARNING: No vehicle plugged in")
+                print("   Charging cannot start until vehicle is connected")
+                exit(1)
+            
+            # Start charging session
+            print(f"⚡ Starting charging session for station {station_id}...")
+            client.start_charging_session(station_id)
+            print("\n" + "=" * 60)
+            print("✅ SUCCESS: Charging session started!")
+            print("=" * 60)
+            
+        except ChargePointCommunicationException as e:
+            print(f"\n❌ ERROR: ChargePoint API communication failed")
+            print(f"   {str(e)}")
+            exit(1)
+        except Exception as e:
+            print(f"\n❌ ERROR: Unexpected error occurred")
+            print(f"   {type(e).__name__}: {str(e)}")
+            exit(1)
+        EOF

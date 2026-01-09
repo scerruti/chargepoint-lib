@@ -1,43 +1,19 @@
-name: Weekly Charging Report
+#!/usr/bin/env python3
+"""
+Generate weekly charging report from GitHub Actions run logs.
+"""
 
-on:
-  schedule:
-    # Sundays at 8 AM PT (16:00 UTC)
-    - cron: '0 16 * * 0'
-  workflow_dispatch: # Manual trigger for testing
-
-jobs:
-  report:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-    
-    - name: Install dependencies
-      run: pip install requests
-    
-    - name: Generate weekly report
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: python -c "
 import json
 import subprocess
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-pacific = ZoneInfo('America/Los_Angeles')
+pacific = ZoneInfo("America/Los_Angeles")
 
 # Get all charge-ev runs from past 7 days
-cmd = 'gh run list --workflow charge-ev.yml --limit 100 --json databaseId,createdAt,conclusion,status'
-result = subprocess.run(cmd.split(), capture_output=True, text=True)
+cmd = ["gh", "run", "list", "--workflow", "charge-ev.yml", "--limit", "100", 
+       "--json", "databaseId,createdAt,conclusion,status"]
+result = subprocess.run(cmd, capture_output=True, text=True)
 runs = json.loads(result.stdout)
 
 new_records = []
@@ -50,8 +26,8 @@ for run in runs:
             break
         
         # Fetch full log
-        log_cmd = f'gh run view {run[\"databaseId\"]} --log'
-        log_result = subprocess.run(log_cmd.split(), capture_output=True, text=True)
+        log_cmd = ["gh", "run", "view", str(run["databaseId"]), "--log"]
+        log_result = subprocess.run(log_cmd, capture_output=True, text=True, timeout=30)
         log_text = log_result.stdout
         
         # Parse log for key info
@@ -63,9 +39,11 @@ for run in runs:
         if 'SUCCESS: Charging session started' in log_text:
             reason = 'Charging started successfully'
             # Extract timestamp
-            for line in log_text.split('\\n'):
+            for line in log_text.split('\n'):
                 if 'Start time:' in line:
-                    start_time_pt = line.split('Start time:')[1].strip()
+                    parts = line.split('Start time:')
+                    if len(parts) > 1:
+                        start_time_pt = parts[1].strip()
         elif 'Charger is offline' in log_text:
             reason = 'Charger offline'
         elif 'No vehicle plugged in' in log_text:
@@ -90,7 +68,7 @@ for run in runs:
         }
         new_records.append(record)
     except Exception as e:
-        print(f'Error processing run {run.get(\"databaseId\")}: {e}')
+        print(f'Error processing run {run.get("databaseId")}: {e}')
 
 # Load existing data
 try:
@@ -113,16 +91,3 @@ with open('data/runs.json', 'w') as f:
     json.dump(data, f, indent=2)
 
 print(f'Updated {len(new_records)} new runs')
-"
-    
-    - name: Commit and push
-      run: |
-        git config user.name 'GitHub Actions'
-        git config user.email 'actions@github.com'
-        git add data/runs.json
-        if git diff --cached --quiet; then
-          echo 'No changes to commit'
-        else
-          git commit -m 'Update weekly charging report data'
-          git push
-        fi

@@ -7,10 +7,65 @@ Runs on cron schedule to start charging at 6 AM PST/PDT
 import os
 import sys
 import time
+import json
+import subprocess
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from python_chargepoint import ChargePoint
 from python_chargepoint.exceptions import ChargePointCommunicationException
+
+
+def record_run_result(result, reason, polling_duration_sec=0):
+    """Append charging run result to data/runs.json and commit to repo."""
+    pacific = ZoneInfo("America/Los_Angeles")
+    now_utc = datetime.now(ZoneInfo('UTC'))
+    now_pt = datetime.now(pacific)
+    
+    run_record = {
+        "run_id": os.environ.get("GITHUB_RUN_ID", "unknown"),
+        "date": now_pt.strftime("%Y-%m-%d"),
+        "time_utc": now_utc.strftime("%H:%M:%S"),
+        "time_pt": now_pt.strftime("%H:%M:%S"),
+        "result": result,  # "success" or "failure"
+        "start_time_pt": now_pt.strftime("%H:%M:%S"),
+        "polling_duration_sec": polling_duration_sec,
+        "reason": reason,
+        "details": ""
+    }
+    
+    data_file = "data/runs.json"
+    
+    try:
+        # Load existing data
+        if os.path.exists(data_file):
+            with open(data_file, 'r') as f:
+                data = json.load(f)
+        else:
+            data = {"runs": []}
+        
+        # Append new record
+        data["runs"].append(run_record)
+        
+        # Write back
+        with open(data_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        print(f"✓ Recorded run result: {result} ({reason})")
+        
+        # Git commit and push
+        try:
+            subprocess.run(["git", "config", "user.name", "GitHub Actions"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True, capture_output=True)
+            subprocess.run(["git", "add", data_file], check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-m", f"Record charging run: {result}"], check=True, capture_output=True)
+            subprocess.run(["git", "push"], check=True, capture_output=True)
+            print("✓ Committed and pushed run data")
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️  Warning: Could not commit run data: {e}")
+            # Don't fail the job if git commit fails
+    except Exception as e:
+        print(f"⚠️  Warning: Could not record run data: {e}")
+        # Don't fail the job if data logging fails
 
 
 def wait_for_scheduled_charging_to_end(client, charger_id):
@@ -209,6 +264,7 @@ def main():
     now = datetime.now(pacific)
     if now.hour > 6:
         print(f"ℹ️  Past charging window (current hour: {now.hour}, target: 5:50–6:05) - exiting")
+        record_run_result("success", "Skipped: past charging window")
         sys.exit(0)
     
     print("🎯 Within charging window, proceeding...")
@@ -220,11 +276,13 @@ def main():
         print("=" * 60)
         print("✅ Charging automation completed successfully")
         print("=" * 60)
+        record_run_result("success", "Charging session started successfully")
         sys.exit(0)
     else:
         print("=" * 60)
         print("❌ Charging automation failed - see errors above")
         print("=" * 60)
+        record_run_result("failure", "Charging session failed - see logs")
         sys.exit(1)
 
 

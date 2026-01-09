@@ -2,9 +2,13 @@ name: EV Charging Automation
 
 on:
   schedule:
-    # Weekdays at 13:00 UTC (5 AM PST / 6 AM PDT); script waits until 6 AM PT
-    - cron: '0 13 * * 1-5'
+    # Weekdays, single early run. 12:45 UTC = 5:45 PDT / 4:45 PST; script waits until 6:00 PT.
+    - cron: '45 12 * * 1-5'
   workflow_dispatch: # Allow manual triggering for testing
+
+concurrency:
+  group: charge-ev
+  cancel-in-progress: true
 
 jobs:
   charge:
@@ -13,6 +17,12 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+    
+    - name: Configure Git
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git config --global url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
     
     - name: Set up Python
       uses: actions/setup-python@v5

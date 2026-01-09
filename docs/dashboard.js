@@ -14,8 +14,6 @@ async function initDashboard() {
         const runs = data.runs || [];
         
         renderSummary(runs);
-        renderCharts(runs);
-        renderTable(runs);
     } catch (error) {
         console.error('Dashboard error:', error);
         document.getElementById('content').innerHTML = `

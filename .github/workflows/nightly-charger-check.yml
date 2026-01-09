@@ -31,6 +31,8 @@ jobs:
         CP_PASSWORD: ${{ secrets.CP_PASSWORD }}
         IFTTT_WEBHOOK_KEY: ${{ secrets.IFTTT_WEBHOOK_KEY }}
         ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+        NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        NTFY_URL: ${{ secrets.NTFY_URL }}
       run: |
         python3 << 'EOF'
         import os
@@ -59,6 +61,8 @@ jobs:
         password = os.environ.get("CP_PASSWORD")
         ifttt_key = os.environ.get("IFTTT_WEBHOOK_KEY")
         alert_email = os.environ.get("ALERT_EMAIL")
+        ntfy_topic = os.environ.get("NTFY_TOPIC")
+        ntfy_url = os.environ.get("NTFY_URL", "https://ntfy.sh")
 
         try:
             print(f"🔐 Authenticating as {username}...")
@@ -108,6 +112,26 @@ jobs:
                     print(f"⚠️  IFTTT webhook error: {str(e)}")
             else:
                 print("ℹ️  No IFTTT_WEBHOOK_KEY configured - skipping Google Home broadcast")
+
+              # Send ntfy.sh push notification (free, no account needed)
+              if ntfy_topic:
+                ntfy_endpoint = f"{ntfy_url.rstrip('/')}/{ntfy_topic}"
+                message = "EV charger is offline. Please check charger and WiFi."
+                try:
+                  resp = requests.post(
+                    ntfy_endpoint,
+                    data=message.encode("utf-8"),
+                    headers={"Title": "EV Charger Offline", "Priority": "high"},
+                    timeout=10,
+                  )
+                  if resp.status_code < 300:
+                    print("✓ ntfy.sh push sent")
+                  else:
+                    print(f"⚠️  ntfy.sh push failed: {resp.status_code}")
+                except Exception as e:
+                  print(f"⚠️  ntfy.sh error: {e}")
+              else:
+                print("ℹ️  No NTFY_TOPIC configured - skipping ntfy.sh push")
             
             # Optional: Send email notification
             if alert_email:

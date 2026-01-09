@@ -166,12 +166,18 @@ If you prefer not to use IFTTT, here are alternatives:
 - Use GitHub webhook → Home Assistant → Google Home
 - More complex but more control
 
-### Option 2: Pushover/ntfy.sh
-- Send push notification to your phone instead
-- Simpler, no Google Home integration needed
-- GitHub Actions → Pushover → Phone notification
+### Option 2: ntfy.sh (free push, no account)
+- Create a topic name, e.g., `cph50-alerts`
+- Add repo secret: `NTFY_TOPIC` = your topic name (e.g., `cph50-alerts`)
+- (Optional) `NTFY_URL` if self-hosting; otherwise defaults to https://ntfy.sh
+- Install ntfy app on phone and subscribe to the topic; or open https://ntfy.sh/cph50-alerts in a browser to receive
+- The nightly workflow will push “EV charger offline” when offline at 8 PM
 
-### Option 3: Email
+### Option 3: Pushover
+- Requires Pushover account; add secrets `PUSHOVER_TOKEN`, `PUSHOVER_USER`
+- We can wire this in if you prefer
+
+### Option 4: Email
 - Already configured via `ALERT_EMAIL` secret
 - Not as immediate as Google Home broadcast
 - Can use email-to-SMS gateways (e.g., vtext.com, tmomail.net)

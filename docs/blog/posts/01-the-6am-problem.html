@@ -210,7 +210,7 @@ Cost: $4.45
 
             <p>This way, the charger still respects utility rate schedules, avoids expensive peak hours, and handles all the TOU complexity. We just add a single "tap to continue" at 6 AM.</p>
 
-            <p>Simple in concept. But as I'd soon learn, implementing it would require diving into unofficial APIs, navigating legacy authentication systems, and choosing between a surprisingly diverse set of automation platforms.</p>
+            <p>The logic seems trivial: <em>"If it's 6 AM, hit start."</em> But in practice, this required a system that could authenticate with a legacy API, spoof a mobile device, handle network errors, and run reliably without a dedicated server. What started as a "simple" automation quickly turned into a lesson in reverse-engineering.</p>
 
             <p>That journey starts in the next post.</p>
 

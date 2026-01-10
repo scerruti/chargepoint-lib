@@ -1,0 +1,49 @@
+---
+layout: default
+---
+
+<article style="padding: 0; box-shadow: none; background: transparent;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #667eea; margin-bottom: 10px;">{{ page.title }}</h1>
+        <div style="color: #666; font-size: 0.9em;">
+            📅 {{ page.date | date: "%B %d, %Y" }}
+            {% if page.tags %}
+                | {% for tag in page.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    {{ content }}
+
+    <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+    {% if page.prev %}
+        <p style="text-align: left; margin-bottom: 20px;">
+            <strong>← Previous:</strong> <a href="{{ page.prev.url }}" style="color: #667eea;">{{ page.prev.title }}</a>
+        </p>
+    {% endif %}
+    {% if page.next %}
+        <p style="text-align: right; margin-bottom: 20px;">
+            <strong>Next:</strong> <a href="{{ page.next.url }}" style="color: #667eea;">{{ page.next.title }}</a> →
+        </p>
+    {% endif %}
+
+    <!-- Comments powered by giscus -->
+    <div id="comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="scerruti/cph50-control"
+            data-repo-id="R_kgDOQ2fzlA"
+            data-category="Blog comments"
+            data-category-id="DIC_kwDOQ2fzlM4C0xmp"
+            data-mapping="pathname"
+            data-strict="1"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="top"
+            data-theme="light"
+            data-lang="en"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+</article>

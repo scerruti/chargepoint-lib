@@ -1,17 +1,22 @@
 {
-  "session_id": null,
-  "timestamp": null,
-  "detected_at": null,
-  "power_kw": 0,
+  "session_id": "4758000341",
+  "timestamp": "2026-01-10T12:31:33.316511+00:00",
+  "detected_at": "2026-01-10 04:31:33 PST",
+  "power_kw": null,
   "energy_kwh": null,
   "duration_minutes": null,
   "vehicle_id": null,
   "vehicle_confidence": null,
   "status": {
-    "connected": false,
-    "plugged_in": false,
-    "charging_status": "UNKNOWN",
-    "charger_id": null,
-    "last_connected_at": null
+    "charger_id": 12048111,
+    "connected": true,
+    "plugged_in": true,
+    "charging_status": "CHARGING",
+    "last_connected_at": "2023-02-03T07:44:32+00:00",
+    "session_id": "4758000341",
+    "charging": true,
+    "power_kw": null,
+    "energy_kwh": null,
+    "duration_minutes": null
   }
 }

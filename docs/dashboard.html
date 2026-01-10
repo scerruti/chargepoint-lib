@@ -237,7 +237,8 @@
             volvo: 'images/volvo.png',
             equinox: 'images/equinox.png',
             volvo_xc40_2021: 'images/volvo.png',
-            serenity_equinox_2024: 'images/equinox.png'
+            serenity_equinox_2024: 'images/equinox.png',
+            unknown: 'images/unknown.svg'
         };
         
         async function loadDashboard() {
@@ -280,7 +281,7 @@
             const vehicle = session?.vehicle_id || 'unknown';
             const confidence = session?.vehicle_confidence || 0;
             let vehicleDisplay = '';
-            const vehicleImage = VEHICLE_IMAGES[vehicle] || VEHICLE_IMAGES.volvo;
+            const vehicleImage = VEHICLE_IMAGES[vehicle] || VEHICLE_IMAGES.unknown;
             switch (vehicle) {
                 case 'volvo':
                 case 'volvo_xc40_2021':

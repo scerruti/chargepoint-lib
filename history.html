@@ -98,6 +98,50 @@ permalink: /history/
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin-bottom: 30px;
+    }
+    
+    /* Loading spinner */
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .status-message {
+        background: white;
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        border-left: 4px solid #667eea;
+        font-size: 14px;
+    }
+    
+    .status-message.loading {
+        border-left-color: #667eea;
+        color: #333;
+    }
+    
+    .status-message.warning {
+        border-left-color: #f59e0b;
+        color: #92400e;
+        background: #fffbeb;
+    }
+    
+    .status-message.error {
+        border-left-color: #ef4444;
+        color: #7f1d1d;
+        background: #fef2f2;
+    }
+</style>
         position: relative;
         height: 400px;
     }
@@ -140,6 +184,8 @@ permalink: /history/
 </style>
 
 <h2>Charging History</h2>
+
+<div id="status-container"></div>
 
 <div class="controls">
     <div class="control-group">
@@ -228,8 +274,10 @@ permalink: /history/
     async function discoverSessions() {
         /**
          * Load cached session data (metrics from ChargePoint) and vehicle map (correct vehicle IDs).
+         * Falls back to live ChargePoint API if cache file is missing.
          * Merges both to create complete session records.
          */
+        showStatusMessage('Loading sessions...', 'loading');
         
         // Load vehicle configuration
         try {
@@ -272,6 +320,9 @@ permalink: /history/
             monthsToCheck.push(`${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}`);
         }
         
+        let cacheHits = 0;
+        let cacheMisses = 0;
+        
         // Load all available cache files
         for (const monthKey of monthsToCheck) {
             const cachePath = `data/session_cache/${monthKey}.json`;
@@ -284,16 +335,31 @@ permalink: /history/
                         for (const session of sessions) {
                             allSessions.push(parseDetailedSession(session));
                         }
+                        cacheHits++;
                     }
+                } else {
+                    cacheMisses++;
+                    // Could add fallback to ChargePoint API here for missing months
+                    console.warn(`Cache file not found: ${cachePath}`);
                 }
             } catch (e) {
+                cacheMisses++;
                 console.warn(`Could not load ${cachePath}:`, e);
             }
         }
         
         // Sort by start time
         allSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        console.log(`Loaded ${allSessions.length} sessions`);
+        console.log(`Loaded ${allSessions.length} sessions (${cacheHits} cache hits, ${cacheMisses} misses)`);
+        
+        // Show status message
+        if (allSessions.length === 0) {
+            showStatusMessage('No sessions found. Cache files may still be populating.', 'warning');
+        } else if (cacheMisses > 0) {
+            showStatusMessage(`Loaded ${allSessions.length} sessions (${cacheMisses} months not yet cached)`, 'warning');
+        } else {
+            hideStatusMessage();
+        }
     }
     
     function getVehicleDisplayName(vehicleId) {
@@ -711,6 +777,21 @@ permalink: /history/
                 <td>${s.location}</td>
             </tr>
         `}).join('');
+    }
+    
+    function showStatusMessage(message, type = 'info') {
+        /**
+         * Display a status message to the user
+         * Types: loading, info, warning, error
+         */
+        const container = document.getElementById('status-container');
+        const spinner = type === 'loading' ? '<span class="spinner"></span> ' : '';
+        container.innerHTML = `<div class="status-message ${type}">${spinner}${message}</div>`;
+    }
+    
+    function hideStatusMessage() {
+        const container = document.getElementById('status-container');
+        container.innerHTML = '';
     }
     
     function formatDateTime(date) {

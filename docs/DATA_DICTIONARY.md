@@ -307,6 +307,24 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 ## Web Pages & Components
 
+### Sitewide Authentication
+**Implemented by**: `assets/js/auth.js` (loaded by `_layouts/default.html`)  
+**UI Component**: `_includes/auth.html` (displayed on all pages)  
+
+**Features**:
+- GitHub Personal Access Token (PAT) login form
+- Verifies collaborator status against repo
+- Stores token in localStorage for persistence
+- Sets global `window.isContributor` flag for conditional features
+- Available on all pages via shared layout
+
+**Security**:
+- PAT stored client-side (temporary solution - see KNOWN_ISSUES.md)
+- Roadmap: OAuth2 with backend token exchange
+- Currently: Best-effort for now to enable future admin features
+
+---
+
 ### `index.html` (Dashboard)
 **Reads**:
 - `data/last_session.json` (current session status)
@@ -318,11 +336,13 @@ This document describes all data files in the CPH50 Control system, their purpos
 - Vehicle name with confidence
 - Vehicle image
 
+**Auth Integration**: Uses global `window.isContributor` (future feature gating)
+
 ---
 
 ### `history.html` (History/Analytics)
 **Reads**:
-- Monthly cache files from `data/session_cache/YYYY-MM.json`
+- Monthly cache files from `data/session_cache/YYYY-MM.json` (via GitHub raw API)
 - `data/vehicle_config.json` (vehicle names and efficiency)
 - `data/session_vehicle_map.json` (correct vehicle assignments)
 
@@ -332,15 +352,14 @@ This document describes all data files in the CPH50 Control system, their purpos
 - Session details table with filters
 - Vehicle and metric selection dropdowns
 
-**Fallback Strategy**:
-- Loads cached monthly files from GitHub (fast, no API calls)
-- If cache file missing: Shows warning but doesn't block display
-- Future: Will fetch from ChargePoint API via proxy endpoint (pending implementation)
-- Requires: Python API endpoint or Cloudflare Worker proxy that:
-  - Authenticates with ChargePoint (CP_USERNAME/CP_PASSWORD)
-  - Fetches session details
-  - Returns formatted session data
-  - Endpoint: `/api/session/{sessionId}` (POST or GET)
+**Data Flow**:
+- Loads vehicle_config and session_vehicle_map from GitHub
+- Discovers available monthly cache files (last 13 months)
+- For each month: fetches `data/session_cache/YYYY-MM.json` from GitHub raw API
+- Merges cache data (metrics) with vehicle_map (correct vehicle IDs)
+- All data served from GitHub (no authentication needed for reads)
+
+**Auth Integration**: Uses global `window.isContributor` (future manual labeling UI)
 
 ---
 
@@ -367,15 +386,35 @@ This document describes all data files in the CPH50 Control system, their purpos
 ---
 
 ### `collect_session_data.py`
-**Triggered by**: `monitor_sessions.py` on new session  
+**Triggered by**: GitHub Actions workflow `collect-session-data.yml` (on new session detection)  
 **Duration**: 5 minutes of collection (30 samples at 10s intervals)  
 **Reads**:
 - ChargePoint API (session power/energy data)
 - `classify_vehicle.py` (ML inference)
 
 **Writes**:
-- `data/sessions/YYYY/MM/DD/{session_id}.json`
-- Git commits the new session file
+- `data/sessions/YYYY/MM/DD/{session_id}.json` (5-min power samples)
+- `data/session_vehicle_map.json` (vehicle classification results)
+- Git commits session data
+
+**Then triggers**: `fetch_session_details.py` (next step in workflow)
+
+---
+
+### `fetch_session_details.py`
+**Triggered by**: GitHub Actions workflow `collect-session-data.yml` (after `collect_session_data.py`)  
+**Reads**:
+- ChargePoint API (full session metrics)
+- `data/sessions/YYYY/MM/DD/{session_id}.json` (for vehicle classification)
+
+**Writes**:
+- `data/session_cache/YYYY-MM.json` (appends session to monthly cache file)
+- Git commits monthly cache file
+
+**Purpose**: 
+- Fetches complete ChargePoint session data (energy, duration, location, etc.)
+- Merges with vehicle classification from session samples
+- Organizes by month for efficient loading by `history.html`
 
 ---
 
@@ -421,7 +460,35 @@ data/sessions/
       └── 01/
           └── 10/
               └── 4758000341.json
+
+data/session_cache/
+  ├── 2025-01.json  (contains all sessions from January 2025)
+  ├── 2025-02.json
+  └── 2026-01.json  (contains all sessions from January 2026)
 ```
+
+---
+
+## GitHub Actions Workflows
+
+All data collection and caching is orchestrated by GitHub Actions workflows:
+
+### `monitor-sessions.yml`
+**Schedule**: Every 10 minutes (cron: `*/10 * * * *`)  
+**Runs**: `monitor_sessions.py`
+**Flow**:
+1. Detects new charging sessions via ChargePoint API
+2. Saves session snapshot to `data/last_session.json` (dashboard)
+3. On new session detected: Triggers `collect-session-data.yml` workflow
+
+### `collect-session-data.yml`
+**Triggered by**: `monitor-sessions.yml` on new session  
+**Runs**:
+1. `collect_session_data.py` - Collects 5 minutes of power samples + ML classification
+2. `fetch_session_details.py` - Fetches full ChargePoint metrics, caches to monthly file
+**Commits**: Session samples and monthly cache files to repo
+
+**Result**: Both `data/sessions/` and `data/session_cache/` are populated and committed
 
 ---
 

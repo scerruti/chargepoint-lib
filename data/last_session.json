@@ -1,24 +1,11 @@
 {
-  "session_id": "4758000341",
   "timestamp": "2026-01-10T16:48:12.804644+00:00",
   "detected_at": "2026-01-10 08:48:12 PST",
   "power_kw": 0.0,
   "energy_kwh": 62.6838,
   "duration_minutes": null,
   "vehicle_id": "volvo",
-  "vehicle_confidence": 0.6649705730742851,
-  "status": {
-    "charger_id": 12048111,
-    "connected": true,
-    "plugged_in": true,
-    "charging_status": "NOT_CHARGING",
-    "last_connected_at": "2023-02-03T07:44:32+00:00",
-    "session_id": "4758000341",
-    "charging": true,
-    "power_kw": 0.0,
-    "energy_kwh": 62.6838,
-    "duration_minutes": null,
-    "vehicle_id": "volvo",
-    "vehicle_confidence": 0.6649705730742851
-  }
+  "vehicle_confidence": 0.66,
+  "connected": true,
+  "charging": false
 }

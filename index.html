@@ -254,7 +254,7 @@ permalink: /
     }
 
     function displaySession(session) {
-        if (!session || !session.session_id) {
+        if (!session || !session.timestamp) {
             displayNoData();
             return;
         }

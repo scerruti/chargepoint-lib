@@ -273,46 +273,42 @@ permalink: /history/
     
     async function fetchSessionFromChargePoint(sessionId, monthKey) {
         /**
-         * Fallback: Fetch a single session from ChargePoint API via proxy endpoint.
-         * This would be called when a cache file is missing for a specific month.
+         * Fetch a single session from ChargePoint API via proxy endpoint.
          * 
-         * Requires: A proxy endpoint (Python API or Cloudflare Worker) that:
+         * Requires: A proxy endpoint at /api/session/{sessionId} that:
          * - Authenticates with ChargePoint
          * - Fetches the session
-         * - Returns formatted session data
+         * - Returns formatted session data matching the cache file format
          * 
-         * Currently: Returns null (placeholder for future implementation)
+         * Returns: Session object or null if not found
          */
         try {
-            // When implemented, this would call something like:
-            // GET /api/session/{sessionId}
-            // POST to a Python endpoint that fetches from ChargePoint
-            // Or use a Cloudflare Worker as proxy
-            
-            console.log(`Attempting to fetch ${sessionId} from ChargePoint (not yet implemented)`);
-            
-            // Placeholder: would fetch and parse response
-            // const response = await fetch(`/api/session/${sessionId}?t=${Date.now()}`);
-            // if (response.ok) {
-            //     return await response.json();
-            // }
-            
-            return null;
+            const response = await fetch(`/api/session/${sessionId}?t=${Date.now()}`);
+            if (response.ok) {
+                const sessionData = await response.json();
+                console.log(`Fetched session ${sessionId} from ChargePoint API`);
+                return sessionData;
+            } else {
+                console.warn(`Session ${sessionId} not found from ChargePoint (HTTP ${response.status})`);
+                return null;
+            }
         } catch (e) {
-            console.warn(`Could not fetch ${sessionId} from ChargePoint:`, e);
+            console.warn(`Could not fetch session ${sessionId} from ChargePoint:`, e);
             return null;
         }
     }
     
     async function discoverSessions() {
         /**
-         * Load cached session data (metrics from ChargePoint) and vehicle map (correct vehicle IDs).
-         * Falls back to live ChargePoint API if cache file is missing.
-         * Merges both to create complete session records.
+         * Discover and load charging sessions:
+         * 1. Fetch list of sessions from ChargePoint API (via proxy endpoint)
+         * 2. For each session, try to load from local cache first
+         * 3. If not in cache, fetch from ChargePoint API
+         * 4. Merge with vehicle map (correct vehicle IDs) and vehicle config
          */
-        showStatusMessage('Loading sessions...', 'loading');
+        showStatusMessage('Fetching charging sessions from ChargePoint...', 'loading');
         
-        // Load vehicle configuration
+        // Load vehicle configuration and session vehicle map
         try {
             const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/data/vehicle_config.json?t=${Date.now()}`);
             if (response.ok) {
@@ -323,7 +319,6 @@ permalink: /history/
             console.warn('Could not load vehicle config:', e);
         }
         
-        // Load session vehicle map (authoritative vehicle assignments)
         try {
             const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/data/session_vehicle_map.json?t=${Date.now()}`);
             if (response.ok) {
@@ -335,71 +330,94 @@ permalink: /history/
         }
         
         allSessions = [];
+        let cacheHits = 0;
+        let liveApiHits = 0;
+        let apiErrors = 0;
         
-        // Dynamically discover cache files for current and previous year
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;
-        
-        // Generate list of months to check (current year + last 12 months)
-        const monthsToCheck = [];
-        for (let m = 0; m < 13; m++) {
-            let year = currentYear;
-            let month = currentMonth - m;
-            if (month < 1) {
-                month += 12;
-                year -= 1;
+        // Step 1: Get list of sessions from ChargePoint
+        let sessionIds = [];
+        try {
+            const response = await fetch('/api/sessions?t=' + Date.now());
+            if (response.ok) {
+                const data = await response.json();
+                sessionIds = data.sessions || [];
+                console.log(`Retrieved ${sessionIds.length} sessions from ChargePoint`);
+            } else {
+                showStatusMessage('Could not fetch session list from ChargePoint API', 'error');
+                console.error('Session list API returned:', response.status);
+                return;
             }
-            monthsToCheck.push(`${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}`);
+        } catch (e) {
+            showStatusMessage('Error connecting to ChargePoint API: ' + e.message, 'error');
+            console.error('Could not fetch session list:', e);
+            return;
         }
         
-        let cacheHits = 0;
-        let cacheMisses = 0;
-        let fallbackAttempts = 0;
-        
-        // Load all available cache files
-        for (const monthKey of monthsToCheck) {
+        // Step 2: Load each session (from cache or live API)
+        for (const sessionId of sessionIds) {
+            const sessionStart = parseSessionDate(sessionId);
+            const monthKey = `${sessionStart.year}-${sessionStart.month}`;
+            
+            let sessionData = null;
+            
+            // Try to load from cache first
             const cachePath = `data/session_cache/${monthKey}.json`;
             try {
                 const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/${cachePath}?t=${Date.now()}`);
                 if (response.ok) {
-                    const sessions = await response.json();
-                    // sessions is an array of session objects
-                    if (Array.isArray(sessions)) {
-                        for (const session of sessions) {
-                            allSessions.push(parseDetailedSession(session));
-                        }
+                    const cachedSessions = await response.json();
+                    // Find the specific session in the cache file
+                    const found = cachedSessions.find(s => s.session_id === sessionId);
+                    if (found) {
+                        sessionData = found;
                         cacheHits++;
                     }
-                } else {
-                    cacheMisses++;
-                    // Attempt fallback to ChargePoint API for this month
-                    // Note: This requires a proxy endpoint (Python API or Cloudflare Worker)
-                    // For now, just log - implementation pending
-                    console.warn(`Cache file not found: ${cachePath} - fallback not yet available`);
-                    fallbackAttempts++;
                 }
             } catch (e) {
-                cacheMisses++;
-                console.warn(`Could not load ${cachePath}:`, e);
+                // Cache miss - will try live API
+            }
+            
+            // If not in cache, fetch from ChargePoint
+            if (!sessionData) {
+                sessionData = await fetchSessionFromChargePoint(sessionId);
+                if (sessionData) {
+                    liveApiHits++;
+                } else {
+                    apiErrors++;
+                }
+            }
+            
+            // Add to display if we got data
+            if (sessionData) {
+                allSessions.push(parseDetailedSession(sessionData));
             }
         }
         
         // Sort by start time
         allSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        console.log(`Loaded ${allSessions.length} sessions (${cacheHits} cache hits, ${cacheMisses} misses, ${fallbackAttempts} fallback attempts)`);
+        console.log(`Loaded ${allSessions.length} sessions (${cacheHits} from cache, ${liveApiHits} from ChargePoint, ${apiErrors} errors)`);
         
         // Show status message
         if (allSessions.length === 0) {
-            showStatusMessage('No sessions found. Cache files may still be populating.', 'warning');
-        } else if (cacheMisses > 0) {
-            const message = fallbackAttempts > 0 
-                ? `Loaded ${allSessions.length} sessions (${cacheMisses} months not cached, ${fallbackAttempts} fallback pending)`
-                : `Loaded ${allSessions.length} sessions (${cacheMisses} months not yet cached)`;
-            showStatusMessage(message, 'warning');
+            showStatusMessage('No sessions found', 'warning');
+        } else if (liveApiHits > 0 || apiErrors > 0) {
+            const message = `Loaded ${allSessions.length} sessions (${cacheHits} cached, ${liveApiHits} live, ${apiErrors} errors)`;
+            showStatusMessage(message, liveApiHits > 0 ? 'info' : 'warning');
         } else {
             hideStatusMessage();
         }
+    }
+    
+    function parseSessionDate(sessionId) {
+        /**
+         * Extract start date from session ID and format for cache lookup
+         * For now, use current month - in practice ChargePoint API should provide timestamps
+         */
+        const now = new Date();
+        return {
+            year: now.getFullYear(),
+            month: String(now.getMonth() + 1).padStart(2, '0')
+        };
     }
     
     function getVehicleDisplayName(vehicleId) {

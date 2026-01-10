@@ -1,0 +1,106 @@
+---
+layout: post
+title: Respecting the Rate Plan
+date: 2026-01-09
+tags: [chargepoint, utility-rates, design]
+---
+
+<p>Before diving into automation, I want to explain why I was so committed to preserving the CPH50's native Energy Price Plan scheduling rather than replacing it entirely.</p>
+
+<h2>What is Energy Price Plan Scheduling?</h2>
+
+<p>Most EV charging stations let you set simple time-based schedules: "Only charge between midnight and 6 AM." This works, but it's brittle. When your utility changes rate windows—say, extending off-peak hours to 7 AM during summer—you have to manually update the schedule.</p>
+
+<p>ChargePoint's Energy Price Plan feature takes a different approach:</p>
+
+<ol>
+    <li>You select your utility provider from a list</li>
+    <li>You choose your specific rate plan (e.g., SDGE EV-TOU-5)</li>
+    <li>The charger automatically schedules charging during the cheapest time-of-use windows</li>
+</ol>
+
+<p>The charger handles all the complexity:</p>
+
+<ul>
+    <li><strong>Weekday vs. weekend rates</strong> – Different utilities have different schedules</li>
+    <li><strong>Seasonal variations</strong> – Summer and winter rate windows can differ</li>
+    <li><strong>Holiday schedules</strong> – Some utilities treat holidays as weekends</li>
+    <li><strong>Rate plan updates</strong> – When the utility changes rates, ChargePoint updates the schedule</li>
+</ul>
+
+<h2>The Pitfall: Conflicting Schedules</h2>
+
+<p>Many EVs also have their own built-in charging schedulers. You can set departure times, charge limits, and time windows directly in the vehicle.</p>
+
+<div class="warning">
+    <strong>⚠️ Critical Rule:</strong> Never set schedules in both the vehicle <em>and</em> the charger. Pick one.
+</div>
+
+<p>If both the car and the charger are trying to manage schedules, you can end up in scenarios where:</p>
+
+<ul>
+    <li>The car says "don't charge yet" while the charger says "charge now"</li>
+    <li>Neither device charges because each is waiting for the other</li>
+    <li>The car charges immediately, ignoring the cheap rate window</li>
+</ul>
+
+<p>For us, setting the schedule in the charger made more sense. The ChargePoint app is accessible to both of us, whereas vehicle apps are tied to individual accounts. Plus, the Energy Price Plan handles complexity we'd otherwise manage manually.</p>
+
+<h2>Why Not Just Disable It?</h2>
+
+<p>When I realized the native scheduler wouldn't extend past 6 AM, my first instinct was: "I'll just turn off the Energy Price Plan and manage everything myself."</p>
+
+<p>But that would mean:</p>
+
+<ul>
+    <li>Manually tracking SDGE rate changes (they happen)</li>
+    <li>Updating schedules when daylight saving time shifts</li>
+    <li>Handling weekday/weekend differences</li>
+    <li>Missing out on future rate optimizations ChargePoint might add</li>
+</ul>
+
+<p>It felt like throwing away a genuinely useful feature just because it didn't do <em>one extra thing</em> I needed.</p>
+
+<h2>The Design Philosophy</h2>
+
+<p>So the architecture became clear: <strong>extend, don't replace</strong>.</p>
+
+<blockquote>
+    Let the CPH50 handle what it's good at—scheduling around utility rate windows. Our automation just adds a single action at 6 AM: "If you stopped charging because the rate window ended, keep going for one more hour."
+</blockquote>
+
+<p>This approach has several advantages:</p>
+
+<ul>
+    <li><strong>Minimal intervention:</strong> We only touch the system once per day</li>
+    <li><strong>Fail-safe:</strong> If our automation breaks, the charger still works normally</li>
+    <li><strong>No rate tracking:</strong> ChargePoint continues to handle TOU complexity</li>
+    <li><strong>Future-proof:</strong> If ChargePoint improves rate optimization, we benefit automatically</li>
+</ul>
+
+<h2>The Technical Constraint</h2>
+
+<p>This design choice had one important technical consequence: our automation couldn't <em>stop</em> charging at 7 AM. That would require either:</p>
+
+<ol>
+    <li>Polling the ChargePoint API continuously to detect when charging stops naturally</li>
+    <li>Setting a hard cutoff time, which might interrupt charging prematurely</li>
+</ol>
+
+<p>Instead, we rely on the vehicle's charge limit. When Susan's Equinox reaches 90%, it stops drawing power. The charger sees zero current and ends the session. No additional automation needed.</p>
+
+<p>This is why vehicle-side charge limits are so important. They act as a natural stop condition, regardless of how long the charging session runs.</p>
+
+<h2>What About Emergency Override?</h2>
+
+<p>Of course, there are edge cases. What if we need to charge immediately at 2 PM because someone's making an unexpected trip?</p>
+
+<p>The ChargePoint app has a manual "Charge Now" button that overrides any schedule. That's the escape hatch. Our automation doesn't interfere with it.</p>
+
+<h2>Next: Finding the Community Foundation</h2>
+
+<p>With the design philosophy established—extend the native scheduler, don't replace it—the next question was: how do we actually <em>send</em> a "start charging" command at 6 AM?</p>
+
+<p>ChargePoint doesn't offer a public API. There's no official webhook, no documented REST endpoints, no developer portal. But as I'd soon discover, I wasn't the first person to want programmatic control of a ChargePoint charger.</p>
+
+<p>That's where the community comes in.</p>

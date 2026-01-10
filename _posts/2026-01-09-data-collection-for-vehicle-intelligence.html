@@ -1,0 +1,54 @@
+---
+layout: post
+title: Data Collection for Vehicle Intelligence
+date: 2026-01-09
+tags: [data, ml, telemetry]
+---
+
+<p>While the 6 AM automation solves the immediate charging need, I also want the system to learn which vehicle is plugged in without relying on proprietary car APIs. That means turning raw charging telemetry into labeled data.</p>
+
+<h2>Data Collection Loop</h2>
+
+<div class="data-card">
+    <strong>Session monitoring:</strong> A 10-minute poll detects when a new session starts.
+</div>
+<div class="data-card">
+    <strong>High-resolution capture:</strong> Once a session is detected, collect 30 samples at 10-second intervals (5 minutes total).
+</div>
+<div class="data-card">
+    <strong>Store + map:</strong> Save the samples and map them to the session ID in <code>data/sessions</code> and <code>data/session_vehicle_map.json</code>.
+</div>
+
+<p>Why 5 minutes? Early charging behavior captures distinct power ramps that differ between vehicles.</p>
+
+<h2>Labeling Workflow</h2>
+
+<ul>
+    <li>Load recent sessions in the labeling UI (Week 5 deliverable).</li>
+    <li>Assign vehicle labels (Equinox vs. Volvo) using session notes.</li>
+    <li>Persist labels to <code>session_vehicle_map.json</code> for training.</li>
+</ul>
+
+<h2>Future ML Direction</h2>
+
+<ul>
+    <li><strong>Feature extraction:</strong> Power slope, time-to-stabilize, taper patterns.</li>
+    <li><strong>Model:</strong> Start with a lightweight classifier (logistic regression / random forest) to avoid overfitting.</li>
+    <li><strong>Inference:</strong> When a session starts, classify within the first 2–3 minutes to tag the vehicle automatically.</li>
+</ul>
+
+<blockquote>
+    The goal is privacy-preserving intelligence: no VIN scraping, no OEM APIs—just power signatures.
+</blockquote>
+
+<h2>Why This Matters</h2>
+
+<p>Once the system knows which car is present, it can tailor behavior: adjust the 6 AM extension duration, prioritize the vehicle with the lower state of charge, or send vehicle-specific alerts. And it can do it without tapping into manufacturer ecosystems.</p>
+
+<h2>What's Next</h2>
+
+<ul>
+    <li>Collect more labeled sessions across seasons (winter vs. summer charging curves).</li>
+    <li>Add a small evaluation set to measure classifier accuracy before automating decisions.</li>
+    <li>Keep the manual override path clear—ML suggestions should be assistive, not authoritative.</li>
+</ul>

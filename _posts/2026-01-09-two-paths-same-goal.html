@@ -1,0 +1,106 @@
+---
+layout: post
+title: Two Paths, Same Goal
+date: 2026-01-09
+tags: [comparison, diy, hardware-vs-software]
+---
+
+<p>Nikki at Transport Evolved retrofitted a JuiceBox with OpenEVSE hardware and Node-RED to enable load-sharing and smarter scheduling. I extended a CPH50 with a serverless script. Different hardware, different skills, same goal: make home charging smarter.</p>
+
+<h2>The Local vs. Cloud Debate</h2>
+
+<p>I'll admit it: I'm envious of Nikki's home-based system. There's something elegant about hardware running on your local network, independent of cloud infrastructure. No API dependencies, no third-party uptime concerns, no wondering if ChargePoint will rate-limit your polling. Just a Raspberry Pi, some Node-RED flows, and direct control over the pilot signal.</p>
+
+<p>My path relies heavily on the cloud: GitHub Actions for scheduling, ChargePoint's API for control, and their servers to track my SDGE rate plan. It works—but it's not autonomous in the way Nikki's system is.</p>
+
+<h3>The Trajectory: From Cloud to Local</h3>
+
+<p>Eventually, I'd love to migrate the entire charging automation to Home Assistant instead of relying on Google/GitHub infrastructure. The appeal is simple: plug things in, and they work. No third-party modules, no API wrapper libraries, no community forum digging.</p>
+
+<p>But here's the thing: <em>right now</em>, the cloud approach solves my problem perfectly. ChargePoint already knows my SDGE rate schedule—I don't have to maintain that logic. Their Energy Price Plan integration handles time-of-use complexity so I don't have to reverse-engineer rate tables or update my code when SDG&E changes pricing tiers.</p>
+
+<h2>Context Differences</h2>
+
+<div class="compare">
+    <div class="compare-card">
+        <strong>Nikki's project</strong><br>
+        320A service, multiple EVSEs, hardware retrofit, load-sharing focus, fully local control.
+    </div>
+    <div class="compare-card">
+        <strong>My project</strong><br>
+        100A service, single CPH50, no hardware changes, schedule extension focus, cloud-dependent (for now).
+    </div>
+</div>
+
+<h2>Skill Profiles</h2>
+
+<ul>
+    <li><strong>Nikki:</strong> Hardware generalist, comfortable opening the EVSE, swapping boards, wiring CT clamps, using Node-RED for local flows.</li>
+    <li><strong>Me:</strong> Software developer focused on modeling good practices—version control, testing, documentation—for students. Zero hardware changes, cloud automation.</li>
+</ul>
+
+<h2>Approach Trade-offs</h2>
+
+<h3>Hardware Retrofit (Nikki's Path)</h3>
+<ul>
+    <li><strong>Gains:</strong> Deep control (pilot signal, per-phase monitoring), local network independence, no API rate limits</li>
+    <li><strong>Costs:</strong> Requires safety diligence, physical modifications, hardware troubleshooting skills</li>
+    <li><strong>Autonomy:</strong> Fully local—works even if internet goes down</li>
+</ul>
+
+<h3>API-Layer Automation (My Current Path)</h3>
+<ul>
+    <li><strong>Gains:</strong> Non-invasive, leverages existing charger capabilities (like SDGE rate plan tracking), faster to deploy</li>
+    <li><strong>Costs:</strong> Depends on reverse-engineered endpoints, vendor API uptime, cloud infrastructure reliability</li>
+    <li><strong>Autonomy:</strong> Cloud-dependent (but aspiring toward local)</li>
+</ul>
+
+<h2>Why I Haven't Gone Local Yet</h2>
+
+<p>The honest answer? <strong>ChargePoint is doing work I don't want to maintain.</strong></p>
+
+<p>SDGE's time-of-use rates are complex: super off-peak (midnight-6am), off-peak (6am-4pm), peak (4pm-9pm), super off-peak again (9pm-midnight). Different rates for summer vs. winter. Occasional rate adjustments. ChargePoint's Energy Price Plan integration handles all of this—they update their database when rates change, and my CPH50 just knows when to charge.</p>
+
+<p>If I went fully local, I'd have to:</p>
+<ul>
+    <li>Scrape SDGE's rate schedule (or manually update a config file every time rates change)</li>
+    <li>Handle DST transitions correctly</li>
+    <li>Test edge cases (holidays, special events, SDG&E system outages)</li>
+    <li>Maintain this logic forever</li>
+</ul>
+
+<p>That's a lot of undifferentiated heavy lifting for a problem ChargePoint has already solved.</p>
+
+<h2>The Path Forward: Hybrid Approach</h2>
+
+<p>I see my trajectory moving toward <strong>local control with selective cloud dependencies</strong>:</p>
+
+<ol>
+    <li><strong>Phase 1 (current):</strong> GitHub Actions + ChargePoint API—fully cloud-dependent</li>
+    <li><strong>Phase 2 (future):</strong> Evaluate plug-and-play local hardware options (no community forks, just install and go)</li>
+    <li><strong>Phase 3 (future):</strong> Migrate to Home Assistant for scheduling, but <em>still use ChargePoint's rate plan tracking</em> via their API</li>
+    <li><strong>Phase 4 (aspirational):</strong> Full local control with OpenEVSE hardware retrofit—but only if ChargePoint discontinues their Energy Price Plan or their API becomes unreliable</li>
+</ol>
+
+<p>The key insight: <strong>you don't have to choose between 100% local or 100% cloud.</strong> Use cloud services where they add value (like rate plan tracking), and own the critical path locally (like the 6am trigger logic).</p>
+
+<h2>Common Ground</h2>
+
+<ul>
+    <li>Both lean on community knowledge—OpenEVSE docs for Nikki; <code>python-chargepoint</code> and forum threads for me.</li>
+    <li>Both preserve something valuable: Nikki keeps her hardware investment; I keep Energy Price Plan scheduling.</li>
+    <li>Both add a safety valve: manual override still works (Charge Now in the app; physical controls on the EVSE).</li>
+    <li>Both recognize that the "perfect" solution is context-dependent—there's no universal right answer.</li>
+</ul>
+
+<blockquote>
+    There is no single "right" way to extend a charger. Your constraints—service size, budget, trust model, skills, and whether your utility's rate plan is already integrated—decide the path.
+</blockquote>
+
+<h2>Why This Comparison Matters</h2>
+
+<p>It's tempting to claim one approach is superior. The reality: they're optimized for different constraints. Watching Nikki's build validated that DIY energy projects are thriving across hardware and software. It also reinforced my design choice: zero hardware (for now), keep the vendor scheduling, add one precise automation.</p>
+
+<p>But I won't pretend I've reached the finish line. Someday, I might find a plug-and-play local solution that doesn't require community support overhead. Or I might open up that CPH50 and swap in OpenEVSE hardware. For now, though, the cloud path gets me 95% of the way there with 5% of the complexity.</p>
+
+<p>And that's a trade-off I'm willing to make. <em>For now.</em></p>

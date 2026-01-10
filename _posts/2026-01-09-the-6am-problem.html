@@ -1,0 +1,88 @@
+---
+layout: post
+title: "The 6 AM Problem"
+date: 2026-01-09
+tags: [automation, ev-charging, household]
+---
+
+<p>"Can you set the charger to go past 6 AM?"</p>
+
+<p>That was the question my wife Susan asked me one morning. Simple enough on the surface, but it kicked off a technical journey that would involve reverse-engineering unofficial APIs, debugging WAF blocks, and building a serverless automation system.</p>
+
+<p>But first, let me explain why that question mattered.</p>
+
+<h2>Two EVs, One Household</h2>
+
+<p>We each drive an electric vehicle. Susan has a 2021 Volvo XC40 Recharge P8, and I drive a 2024 Chevrolet Equinox EV 2LT ("Serenity"). Our weekday charging schedule is straightforward:</p>
+
+<ul>
+    <li><strong>Susan charges:</strong> Monday and Wednesday</li>
+    <li><strong>I charge:</strong> Tuesday and Thursday</li>
+    <li><strong>Both cars:</strong> Fully charged over the weekend</li>
+</ul>
+
+<p>Per manufacturer recommendations, Susan charges to 90% and I charge to 80%. We use a ChargePoint Home Flex (CPH50) connected to our utility's time-of-use rate plan, which schedules charging to stay in the cheapest overnight window.</p>
+
+<h3>The Morning Shuffle</h3>
+
+<p>On Tuesday and Friday mornings, I swap Susan's car for mine at around 5 AM. She has a commute to Ramona while I head to downtown San Diego. Both commutes are about the same distance. The logistics work, but they depend on both vehicles having enough charge to get through their respective days.</p>
+
+<h2>Winter Changes Everything</h2>
+
+<p>During winter, range efficiency drops. Heating the cabin, conditioning the battery, and cold-weather driving all take their toll. Here's what a typical Wednesday overnight session looked like for Susan's Volvo:</p>
+
+<div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; border-radius: 4px; margin: 20px 0; font-family: 'Courier New', monospace; font-size: 0.9em;">
+Date: 1/8/2026<br>
+Start: 12:00 AM PST<br>
+End: 6:00 AM PST<br>
+Duration: 5h 59m 59s<br>
+Energy: 51.222 kWh<br>
+Cost: $4.91
+</div>
+
+<p>Nearly six hours to recover two days of driving. Thanks to the car swap, she got another 1.67 kWh on the second day before leaving for work to ensure she makes it home.</p>
+
+<p>Compare that to my Tuesday session in the Equinox:</p>
+
+<div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; border-radius: 4px; margin: 20px 0; font-family: 'Courier New', monospace; font-size: 0.9em;">
+Date: 1/7/2026<br>
+Start: 12:00 AM PST<br>
+End: 5:09 AM PST<br>
+Duration: 5h 9m 49s<br>
+Energy: 46.75 kWh<br>
+Cost: $4.45
+</div>
+
+<p>Five hours is plenty for me. But Susan's Volvo is less efficient—both the vehicle itself and her route to Ramona—so it can't fully recover in the same overnight window.</p>
+
+<p>This isn't about darkness or solar production—it's pure cold weather efficiency loss. Battery conditioning and cabin heating both consume energy before a single mile is driven.</p>
+
+<h2>Why Not Just Extend the Schedule?</h2>
+
+<p>The ChargePoint app has a feature I genuinely appreciate: <strong>Energy Price Plan scheduling</strong>. Instead of manually setting start and stop times, you select your utility and rate plan, and the charger automatically schedules charging during the cheapest time-of-use windows.</p>
+
+<p>This is brilliant for a few reasons:</p>
+
+<ul>
+    <li><strong>Set it once:</strong> No need to update schedules when rate plans change</li>
+    <li><strong>Handles complexity:</strong> Weekday/weekend differences, seasonal rates, holidays</li>
+    <li><strong>Avoids conflicts:</strong> You shouldn't set schedules in both the car <em>and</em> the charger—pick one</li>
+</ul>
+
+<p>But the CPH50's native scheduler has one hard constraint: it stops at the end of the cheap rate window. In our case, that's 6:00 AM. There's no official way to say "keep charging for one more hour if the vehicle needs it."</p>
+
+<p>I didn't want to disable the Energy Price Plan and manually manage schedules. That would mean maintaining timers, tracking rate changes, and losing the automation we'd come to rely on. What I wanted was to <em>extend</em> the native scheduler, not replace it.</p>
+
+<h2>The Design Constraint</h2>
+
+<p>So the requirement became clear:</p>
+
+<blockquote style="border-left: 4px solid #667eea; padding-left: 20px; margin: 20px 0; color: #555; font-style: italic;">
+    Preserve the CPH50's native Energy Price Plan scheduling (midnight to 6 AM). At 6:00 AM on weekdays, automatically send a "start charging" command to extend the session by one hour if needed.
+</blockquote>
+
+<p>This way, the charger still respects utility rate schedules, avoids expensive peak hours, and handles all the TOU complexity. We just add a single "tap to continue" at 6 AM.</p>
+
+<p>The logic seems trivial: <em>"If it's 6 AM, hit start."</em> But in practice, this required a system that could authenticate with a legacy API, spoof a mobile device, handle network errors, and run reliably without a dedicated server. What started as a "simple" automation quickly turned into a lesson in reverse-engineering.</p>
+
+<p>That journey starts in the next post.</p>

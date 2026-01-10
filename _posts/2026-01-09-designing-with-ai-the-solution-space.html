@@ -1,0 +1,72 @@
+---
+layout: post
+title: "Architecture: Exploring the Solution Space"
+date: 2026-01-09
+tags: [architecture, design, serverless]
+---
+
+<p>To extend charging past 6 AM without new hardware, I needed to evaluate the architecture options against strict constraints. I used an LLM to generate a matrix of viable platforms and quantify their trade-offs.</p>
+
+<h2>Constraints on the Table</h2>
+
+<ul>
+    <li><strong>Zero to near-zero cost:</strong> This should not require new hardware or a monthly bill.</li>
+    <li><strong>Trust boundary:</strong> Credentials should live with a provider I already trust. Cloudflare (paid customer) beats a random VPS.</li>
+    <li><strong>DST correctness:</strong> The job must fire at 6 AM Pacific, even across daylight saving transitions.</li>
+    <li><strong>Low power budget:</strong> No always-on PC or NUC drawing 10–30W.</li>
+    <li><strong>Schedule preservation:</strong> Charger keeps Energy Price Plan; automation adds a single 6 AM nudge.</li>
+</ul>
+
+<h2>Option Sweep</h2>
+
+<div class="option">
+    <strong>Home Assistant + Add-on</strong><br>
+    Pros: Rich ecosystem, existing ChargePoint integrations.<br>
+    Cons: Needs hardware host; configuration overhead; overkill for a single cron action.
+</div>
+
+<div class="option">
+    <strong>ESP32 + Custom Firmware</strong><br>
+    Pros: Low power, DIY friendly.<br>
+    Cons: Hardware build, wiring to CPH50 relays, safety and warranty questions.
+</div>
+
+<div class="option">
+    <strong>Docker on a NUC / mini PC</strong><br>
+    Pros: Full Linux flexibility, easy cron.
+    Cons: Hardware cost, idle power draw, maintenance surface.
+</div>
+
+<div class="option">
+    <strong>Raspberry Pi</strong><br>
+    Pros: Lower power than NUC, lots of examples.
+    Cons: Still hardware to buy/maintain; SD card wear; timezone/DST management to own.
+</div>
+
+<div class="option">
+    <strong>GitHub Actions Scheduled Workflow</strong><br>
+    Pros: Free, already used earlier in the project.<br>
+    Cons: 15-minute schedule granularity; cron in UTC only; runner cold starts; token rotation management.
+</div>
+
+<div class="option">
+    <strong>Cloudflare Workers + Cron Triggers</strong><br>
+    Pros: Zero cost for this workload; cron accuracy; built-in time libraries; secrets in Wrangler; MailChannels email; runs in V8 isolate (no cold server to patch).<br>
+    Cons: No Node APIs (must be pure fetch/crypto); 10ms CPU bursts, so code must be lean.
+</div>
+
+<h2>Why Cloudflare Workers Won</h2>
+
+<p>Cloudflare Workers fit the constraints best. Unlike a Raspberry Pi (which requires OS patches and idle power), the Worker is stateless, free for this request volume, and handles the DST logic natively.</p>
+
+<p>The cron fires twice daily: at 13:00 UTC and 14:00 UTC. This ensures that 6:00 AM Local Time is always captured, regardless of whether Pacific Time is in Standard (UTC-8) or Daylight Saving (UTC-7). The Worker script checks the local hour and exits if it is not 6 AM.</p>
+
+<ul>
+    <li><strong>Secrets and trust:</strong> Wrangler keeps <code>CP_USERNAME</code>, <code>CP_PASSWORD</code>, <code>CP_STATION_ID</code>, <code>ALERT_EMAIL</code> scoped to the Worker. No third-party server.</li>
+    <li><strong>Zero hardware:</strong> Nothing to power, patch, or monitor. The platform is already on my critical path (DNS, WAF), so I trust its operational stance.</li>
+    <li><strong>Built-in email:</strong> MailChannels is available for alerting without extra services.</li>
+</ul>
+
+<h2>Decision Recorded</h2>
+
+<p>With constraints honored and trade-offs compared, Cloudflare Workers became the clear choice: serverless, zero-cost, time-zone aware, and already within my trust boundary. The next step was translating the community knowledge into code.</p>

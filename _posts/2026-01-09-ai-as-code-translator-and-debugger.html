@@ -1,0 +1,60 @@
+---
+layout: post
+title: "Implementation: Migrating to Cloudflare Workers"
+date: 2026-01-09
+tags: [cloudflare-workers, debugging, typescript]
+---
+
+<p>Once the architecture was chosen (Cloudflare Workers), the challenge shifted to implementation details. I leaned on AI as a translator between the Python-centric community docs and the TypeScript/Workers runtime, and as a debugger for all the sharp edges hidden in HTTP minutiae.</p>
+
+<h2>From Python Examples to TypeScript Workers</h2>
+
+<p>The community documentation is Python-centric, relying on blocking <code>requests</code>. Cloudflare Workers run in a V8 isolate with a Web-standard API surface—no <code>requests</code>, no <code>fs</code>, no Node <code>Buffer</code>. I had to map these patterns:</p>
+
+<ul>
+    <li><strong>requests.post → fetch:</strong> JSON body for modern endpoints; URL-encoded form for legacy NA endpoints.</li>
+    <li><strong>requests.Session → manual cookie header:</strong> Capture <code>Set-Cookie</code> and forward it explicitly in the <code>Cookie</code> header.</li>
+    <li><strong>Python datetime → <code>Temporal</code> / <code>Intl</code> in Workers:</strong> Check <code>America/Los_Angeles</code> hour before acting.</li>
+</ul>
+
+<h2>Debugging the Sharp Edges</h2>
+
+<ol>
+    <li><strong>User-Agent enforcement:</strong> <code>ChargePoint/6.113.0 (com.chargepoint.mobile; build:1; iOS 16.0.0)</code> is required. Without it, the API returns HTML 404 or 403.</li>
+    <li><strong>Legacy NA shard:</strong> Modern docs say <code>account.chargepoint.com</code>; my account is on <code>na.chargepoint.com</code>. Different endpoints, form-encoding instead of JSON.</li>
+    <li><strong>Password encoding:</strong> <code>#</code> must be percent-escaped (<code>%23</code>) in form data. The fix was to use URLSearchParams or <code>--data-urlencode</code> in curl.</li>
+    <li><strong>Station ID format:</strong> Needs the <code>1:</code> prefix (e.g., <code>1:&lt;YOUR_STATION_ID&gt;</code>). Raw serial numbers fail.</li>
+    <li><strong>WAF behaviors:</strong> ChargePoint sometimes returns HTML for errors. I logged the entire body on failure to catch hidden messages.</li>
+</ol>
+
+<p>Resolving these issues required iterative debugging against the WAF. The WAF blocks generic User-Agents, so I had to verify the exact header string required to mimic the iOS app.</p>
+
+<h2>Building the Worker Skeleton</h2>
+
+<pre><code class="language-typescript">export interface Env {
+  CP_USERNAME: string;
+  CP_PASSWORD: string;
+  CP_STATION_ID: string;
+  ALERT_EMAIL: string;
+  TZ_REGION: "America/Los_Angeles";
+}
+
+export default {
+  async scheduled(event, env, ctx) {
+    const now = new Date();
+    const hour = new Intl.DateTimeFormat("en-US", { timeZone: env.TZ_REGION, hour: "numeric", hour12: false }).format(now);
+    if (Number(hour) !== 6) return;
+
+    ctx.waitUntil(runStartCharge(env));
+  }
+};</code></pre>
+
+<p>This stays tight and compliant with Workers constraints—no extraneous dependencies, all Web APIs.</p>
+
+<h2>Retries and Alerting</h2>
+
+<p>Another pattern I used: a retry wrapper with exponential backoff (2s, 4s, 8s) around both login and start_session calls, plus a MailChannels alert on final failure.</p>
+
+<h2>Outcome</h2>
+
+<p>Weeks of reverse-engineering condensed into a day of paired debugging. The Worker now logs clearly, retries sensibly, and sends alerts when things go wrong—all while respecting the charger's native scheduling.</p>

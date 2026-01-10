@@ -1,0 +1,43 @@
+name: Monthly Cache Update
+
+on:
+  # Run on 2nd of each month at 2am Pacific (10am UTC)
+  # This fetches the full previous month after it's complete
+  schedule:
+    - cron: '0 10 2 * *'
+
+jobs:
+  update-previous-month:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+      
+      - name: Update previous month cache
+        env:
+          CP_USERNAME: ${{ secrets.CP_USERNAME }}
+          CP_PASSWORD: ${{ secrets.CP_PASSWORD }}
+        run: |
+          LAST_MONTH=$(date -d "last month" +%Y-%m)
+          echo "📅 Monthly job: Fetching complete cache for $LAST_MONTH"
+          python fetch_session_details.py --month $LAST_MONTH
+      
+      - name: Push changes
+        run: |
+          git push

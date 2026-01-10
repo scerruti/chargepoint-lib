@@ -117,17 +117,51 @@ permalink: /history/
     }
     
     .status-message {
+        position: fixed;
+        top: 80px;
+        right: 20px;
         background: white;
         padding: 12px 16px;
         border-radius: 4px;
-        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         border-left: 4px solid #667eea;
         font-size: 14px;
+        z-index: 1000;
+        max-width: 400px;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
     }
     
     .status-message.loading {
         border-left-color: #667eea;
         color: #333;
+    }
+    
+    .status-message.info {
+        border-left-color: #3b82f6;
+        color: #1e40af;
+        background: #eff6ff;
     }
     
     .status-message.warning {
@@ -783,17 +817,27 @@ permalink: /history/
     
     function showStatusMessage(message, type = 'info') {
         /**
-         * Display a status message to the user
+         * Display a toast-style status message (non-obstructive)
          * Types: loading, info, warning, error
+         * Message appears in top-right corner and doesn't block data
          */
         const container = document.getElementById('status-container');
         const spinner = type === 'loading' ? '<span class="spinner"></span> ' : '';
         container.innerHTML = `<div class="status-message ${type}">${spinner}${message}</div>`;
+        
+        // Auto-hide after 5 seconds for info messages (keep loading/warning visible)
+        if (type === 'info') {
+            setTimeout(() => hideStatusMessage(), 5000);
+        }
     }
     
     function hideStatusMessage() {
         const container = document.getElementById('status-container');
-        container.innerHTML = '';
+        const msg = container.querySelector('.status-message');
+        if (msg) {
+            msg.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => container.innerHTML = '', 300);
+        }
     }
     
     function formatDateTime(date) {

@@ -2,7 +2,10 @@
 """
 Fetch complete ChargePoint session data and cache locally for history display.
 
-Usage: python fetch_session_details.py <session_id>
+Usage: 
+    python fetch_session_details.py <session_id>              # Fetch single session
+    python fetch_session_details.py --month YYYY-MM           # Fetch entire month
+    python fetch_session_details.py --current                 # Fetch current month to now
 
 This script:
 1. Authenticates with ChargePoint
@@ -11,12 +14,9 @@ This script:
 4. Saves to data/session_cache/YYYY-MM.json (organized by month)
 5. Git commits the monthly cache file
 
-The cached monthly files contain an array of session objects with:
-- Vehicle info (name, model, VIN)
-- Location/charger info
-- Session metrics (energy, duration, cost)
-- Utility data (rate plan, grid info)
-- Vehicle classification (vehicle_id, confidence from ML)
+The cached monthly files contain minimal session objects with:
+- session_id, start_time, end_time, energy_kwh
+- vehicle ID and classifier confidence
 
 This allows the history.html page to display comprehensive charging data
 without making repeated ChargePoint API calls. Monthly organization allows
@@ -197,12 +197,108 @@ def fetch_session_details(session_id):
         sys.exit(1)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python fetch_session_details.py <session_id>")
-        print("Example: python fetch_session_details.py abc123xyz")
+def fetch_month_sessions(year, month, up_to_now=False):
+    """
+    Fetch all charging sessions for a specific month from ChargePoint.
+    
+    Args:
+        year (int): Year (e.g., 2026)
+        month (int): Month (1-12)
+        up_to_now (bool): If True, only fetch sessions up to current time (for current month)
+        
+    Returns:
+        list: List of processed session dicts
+    """
+    username = os.getenv('CP_USERNAME')
+    password = os.getenv('CP_PASSWORD')
+    
+    if not username or not password:
+        print("ERROR: CP_USERNAME and CP_PASSWORD environment variables required")
         sys.exit(1)
     
-    session_id = sys.argv[1]
-    result = fetch_session_details(session_id)
-    print(json.dumps(result, indent=2))
+    # Calculate date range
+    start_date = datetime(year, month, 1)
+    
+    if up_to_now:
+        end_date = datetime.now()
+        print(f"[fetch_month_sessions] Fetching sessions from {start_date.date()} to now...")
+    else:
+        # Last day of month
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(year, month + 1, 1) - timedelta(days=1)
+        end_date = end_date.replace(hour=23, minute=59, second=59)
+        print(f"[fetch_month_sessions] Fetching all sessions for {year}-{month:02d}...")
+    
+    try:
+        client = ChargePoint(username=username, password=password)
+        
+        # Get all sessions in date range
+        sessions = client.get_sessions(start_time=start_date, end_time=end_date)
+        print(f"[fetch_month_sessions] Found {len(sessions)} sessions from ChargePoint")
+        
+        # Process each session
+        results = []
+        for session_id in sessions:
+            try:
+                result = fetch_session_details(session_id)
+                if result:
+                    results.append(result)
+            except Exception as e:
+                print(f"[fetch_month_sessions] WARNING: Failed to fetch session {session_id}: {e}")
+                continue
+        
+        print(f"[fetch_month_sessions] Successfully processed {len(results)}/{len(sessions)} sessions")
+        return results
+        
+    except Exception as e:
+        print(f"ERROR: Failed to fetch sessions for {year}-{month:02d}: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage:")
+        print("  python fetch_session_details.py <session_id>        # Fetch single session")
+        print("  python fetch_session_details.py --month YYYY-MM     # Fetch entire month")
+        print("  python fetch_session_details.py --current           # Fetch current month to now")
+        print("")
+        print("Examples:")
+        print("  python fetch_session_details.py abc123xyz")
+        print("  python fetch_session_details.py --month 2026-01")
+        print("  python fetch_session_details.py --current")
+        sys.exit(1)
+    
+    arg = sys.argv[1]
+    
+    if arg == "--current":
+        # Fetch current month up to now
+        now = datetime.now()
+        results = fetch_month_sessions(now.year, now.month, up_to_now=True)
+        print(f"\n✅ Cached {len(results)} sessions for {now.year}-{now.month:02d}")
+        
+    elif arg == "--month":
+        # Fetch entire month
+        if len(sys.argv) < 3:
+            print("ERROR: --month requires YYYY-MM argument")
+            print("Example: python fetch_session_details.py --month 2026-01")
+            sys.exit(1)
+        
+        month_str = sys.argv[2]
+        try:
+            year, month = map(int, month_str.split('-'))
+            results = fetch_month_sessions(year, month, up_to_now=False)
+            print(f"\n✅ Cached {len(results)} sessions for {year}-{month:02d}")
+        except ValueError:
+            print(f"ERROR: Invalid month format: {month_str}")
+            print("Expected format: YYYY-MM (e.g., 2026-01)")
+            sys.exit(1)
+    
+    else:
+        # Single session fetch
+        session_id = arg
+        result = fetch_session_details(session_id)
+        print(json.dumps(result, indent=2))

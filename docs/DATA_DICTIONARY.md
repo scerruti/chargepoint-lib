@@ -134,9 +134,15 @@ This document describes all data files in the CPH50 Control system, their purpos
 ### `data/session_cache/YYYY-MM.json`
 **Purpose**: Minimal session metrics for history display (populated by `fetch_session_details.py`)  
 **Format**: Array of minimal session objects  
-**Created/Updated by**: `fetch_session_details.py` (triggered after session completes)  
-**Read by**: `history.html` (history page displays cached data)  
-**Frequency**: One entry per charging session; file grows over the month (~30-40 sessions/month)  
+**Created/Updated by**: 
+  - `fetch_session_details.py <session_id>` (single session, triggered after collection completes)
+  - `fetch_session_details.py --current` (weekly refresh via `update-cache.yml`)
+  - `fetch_session_details.py --month YYYY-MM` (monthly complete fetch via `monthly-cache-update.yml`)  
+**Read by**: `history.html` (history page loads from GitHub raw API)  
+**Frequency**: 
+  - Immediate: Each new session added after collection
+  - Weekly: Current month refreshed on Sundays at midnight PT (8am UTC)
+  - Monthly: Previous month fully populated on 2nd of new month at 2am PT (10am UTC)  
 **Organization**: Monthly files for efficient loading (single fetch = entire month)
 
 **File Size**: ~5-10 KB per month (very lightweight, fast to load)
@@ -173,6 +179,12 @@ This document describes all data files in the CPH50 Control system, their purpos
 - Vehicle classification merged from `data/sessions/{date}/{id}.json` during creation
 - Atomic writes (temp file + rename) prevent corruption
 - Each commit shows full month snapshot for audit trail
+
+**GitHub Actions Automation**:
+- **Weekly refresh**: `update-cache.yml` (Sundays 8am UTC) updates current month with all sessions to date
+- **Monthly closure**: `monthly-cache-update.yml` (2nd of month 10am UTC) fetches complete previous month
+- **Manual trigger**: Both workflows support manual runs with mode options (current/last/specific month)
+- **Benefit**: History page loads faster with pre-populated cache, no waiting for on-demand fetches
 
 ---
 
@@ -383,19 +395,34 @@ This document describes all data files in the CPH50 Control system, their purpos
 ---
 
 ### `fetch_session_details.py`
-**Triggered by**: GitHub Actions workflow `collect-session-data.yml` (after `collect_session_data.py`)  
+**Modes**:
+1. **Single session**: `fetch_session_details.py <session_id>`
+2. **Current month**: `fetch_session_details.py --current`
+3. **Specific month**: `fetch_session_details.py --month YYYY-MM`
+
+**Triggered by**: 
+- GitHub Actions workflow `collect-session-data.yml` (single session mode after collection)
+- GitHub Actions workflow `update-cache.yml` (weekly current month refresh, manual triggers)
+- GitHub Actions workflow `monthly-cache-update.yml` (monthly previous month fetch)
+
 **Reads**:
-- ChargePoint API (full session metrics)
-- `data/sessions/YYYY/MM/DD/{session_id}.json` (for vehicle classification)
+- ChargePoint API (session metrics via python-chargepoint library)
+- `data/sessions/YYYY/MM/DD/{session_id}.json` (for vehicle classification merge)
 
 **Writes**:
-- `data/session_cache/YYYY-MM.json` (appends session to monthly cache file)
+- `data/session_cache/YYYY-MM.json` (minimal session cache, organized by month)
 - Git commits monthly cache file
 
 **Purpose**: 
-- Fetches complete ChargePoint session data (energy, duration, location, etc.)
-- Merges with vehicle classification from session samples
-- Organizes by month for efficient loading by `history.html`
+- Fetches ChargePoint session data (energy, timestamps, status)
+- Merges vehicle classification from detailed session samples
+- Maintains monthly cache files for fast history page loading
+- Supports batch updates (weekly/monthly) and individual session adds
+
+**GitHub Actions Integration**:
+- Single session: Called after each new charging session completes
+- Weekly: Updates current month cache with all sessions to date (Sundays 8am UTC)
+- Monthly: Fetches complete previous month on 2nd of new month (10am UTC)
 
 ---
 

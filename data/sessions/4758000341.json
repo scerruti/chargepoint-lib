@@ -1,0 +1,321 @@
+{
+  "session_id": "4758000341",
+  "collection_start": "2026-01-10T14:49:17.485497+00:00",
+  "collection_end": "2026-01-10T14:54:10.820488+00:00",
+  "duration_seconds": 293.334991,
+  "sample_count": 30,
+  "valid_sample_count": 30,
+  "interval_seconds": 10,
+  "samples": [
+    {
+      "sample_number": 1,
+      "timestamp": "2026-01-10T14:49:21.021523+00:00",
+      "timestamp_pt": "2026-01-10 06:49:21 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6075,
+      "energy_kwh": 57.5667,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 2,
+      "timestamp": "2026-01-10T14:49:30.775516+00:00",
+      "timestamp_pt": "2026-01-10 06:49:30 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6075,
+      "energy_kwh": 57.5667,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 3,
+      "timestamp": "2026-01-10T14:49:40.785540+00:00",
+      "timestamp_pt": "2026-01-10 06:49:40 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6075,
+      "energy_kwh": 57.5667,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 4,
+      "timestamp": "2026-01-10T14:49:50.777224+00:00",
+      "timestamp_pt": "2026-01-10 06:49:50 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6075,
+      "energy_kwh": 57.5667,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 5,
+      "timestamp": "2026-01-10T14:50:00.790907+00:00",
+      "timestamp_pt": "2026-01-10 06:50:00 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6075,
+      "energy_kwh": 57.5667,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 6,
+      "timestamp": "2026-01-10T14:50:10.782635+00:00",
+      "timestamp_pt": "2026-01-10 06:50:10 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6075,
+      "energy_kwh": 57.5667,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 7,
+      "timestamp": "2026-01-10T14:50:20.781771+00:00",
+      "timestamp_pt": "2026-01-10 06:50:20 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 8,
+      "timestamp": "2026-01-10T14:50:30.790865+00:00",
+      "timestamp_pt": "2026-01-10 06:50:30 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 9,
+      "timestamp": "2026-01-10T14:50:40.808991+00:00",
+      "timestamp_pt": "2026-01-10 06:50:40 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 10,
+      "timestamp": "2026-01-10T14:50:50.776251+00:00",
+      "timestamp_pt": "2026-01-10 06:50:50 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 11,
+      "timestamp": "2026-01-10T14:51:00.822770+00:00",
+      "timestamp_pt": "2026-01-10 06:51:00 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 12,
+      "timestamp": "2026-01-10T14:51:10.756448+00:00",
+      "timestamp_pt": "2026-01-10 06:51:10 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 13,
+      "timestamp": "2026-01-10T14:51:20.771912+00:00",
+      "timestamp_pt": "2026-01-10 06:51:20 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 14,
+      "timestamp": "2026-01-10T14:51:30.805744+00:00",
+      "timestamp_pt": "2026-01-10 06:51:30 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 15,
+      "timestamp": "2026-01-10T14:51:40.780632+00:00",
+      "timestamp_pt": "2026-01-10 06:51:40 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 16,
+      "timestamp": "2026-01-10T14:51:50.802221+00:00",
+      "timestamp_pt": "2026-01-10 06:51:50 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 17,
+      "timestamp": "2026-01-10T14:52:00.777719+00:00",
+      "timestamp_pt": "2026-01-10 06:52:00 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 18,
+      "timestamp": "2026-01-10T14:52:10.778012+00:00",
+      "timestamp_pt": "2026-01-10 06:52:10 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 19,
+      "timestamp": "2026-01-10T14:52:20.800552+00:00",
+      "timestamp_pt": "2026-01-10 06:52:20 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 20,
+      "timestamp": "2026-01-10T14:52:30.804971+00:00",
+      "timestamp_pt": "2026-01-10 06:52:30 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 21,
+      "timestamp": "2026-01-10T14:52:40.776065+00:00",
+      "timestamp_pt": "2026-01-10 06:52:40 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 22,
+      "timestamp": "2026-01-10T14:52:50.957792+00:00",
+      "timestamp_pt": "2026-01-10 06:52:50 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 23,
+      "timestamp": "2026-01-10T14:53:00.805772+00:00",
+      "timestamp_pt": "2026-01-10 06:53:00 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 24,
+      "timestamp": "2026-01-10T14:53:10.778212+00:00",
+      "timestamp_pt": "2026-01-10 06:53:10 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 25,
+      "timestamp": "2026-01-10T14:53:20.854499+00:00",
+      "timestamp_pt": "2026-01-10 06:53:20 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 26,
+      "timestamp": "2026-01-10T14:53:30.772088+00:00",
+      "timestamp_pt": "2026-01-10 06:53:30 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 27,
+      "timestamp": "2026-01-10T14:53:40.775571+00:00",
+      "timestamp_pt": "2026-01-10 06:53:40 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 28,
+      "timestamp": "2026-01-10T14:53:50.788598+00:00",
+      "timestamp_pt": "2026-01-10 06:53:50 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 29,
+      "timestamp": "2026-01-10T14:54:00.788613+00:00",
+      "timestamp_pt": "2026-01-10 06:54:00 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    },
+    {
+      "sample_number": 30,
+      "timestamp": "2026-01-10T14:54:10.820439+00:00",
+      "timestamp_pt": "2026-01-10 06:54:10 PST",
+      "session_id": "4758000341",
+      "power_kw": 8.6282,
+      "energy_kwh": 58.2808,
+      "duration_minutes": null,
+      "status": null
+    }
+  ],
+  "statistics": {
+    "avg_power_kw": 8.624059999999998,
+    "max_power_kw": 8.6282,
+    "min_power_kw": 8.6075,
+    "variance": 6.855839999999815e-05
+  },
+  "vehicle_id": "volvo",
+  "vehicle_confidence": 0.6649705730742851,
+  "labeled_by": "classifier",
+  "labeled_at": "2026-01-10T14:54:10.820923+00:00"
+}

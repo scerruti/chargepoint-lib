@@ -53,100 +53,147 @@
 	Clean up the copilot-instructions.md file in the .github directory by removing all HTML comments.
 	 -->
 
-Cloudflare Project Instructions for GitHub Copilot
-1. Project Context & Goal
-- User: Stephen (Oceanside, CA).
-- Hardware: ChargePoint Home Flex (CPH50).
-- Goal: Robustly automate charging to start at 6:00 AM local time daily.
-- Criticality: High; failures must alert.
+Cloudflare Worker & Data Stack Instructions for GitHub Copilot
 
-2. Technical Architecture
-- Platform: Cloudflare Workers (V8 Isolate), language: TypeScript.
-- Trigger: Cron Triggers.
-- Schedule: 0 13,14 * * * (runs 13:00 and 14:00 UTC); worker must check America/Los_Angeles time and exit unless hour === 6 to handle DST automatically.
+## Project Overview
+- **User**: Stephen (Oceanside, CA)
+- **Hardware**: ChargePoint Home Flex (CPH50)
+- **Goal**: Robustly automate EV charging to start at 6:00 AM PT daily
+- **Architecture**: 
+  - Cloudflare Worker (TypeScript) handles automation
+  - Python scripts collect and process charging data
+  - Jekyll static site displays history & analytics
+  - GitHub Pages hosts the front-end
 
-3. Unofficial ChargePoint Mobile API
-- Authentication: POST https://account.chargepoint.com/account/v1/driver/auth/login with JSON body {"username","password"}; capture set-cookie and access_token from JSON.
-- Start Charging: POST https://mc.chargepoint.com/map-prod/v2 with Cookie (from login) and Authorization: Bearer <token>. Body:
-	{
-		"station_id": "<STATION_ID>",
-		"action": "start_session",
-		"product": "driver",
-		"device_id": "cloudflare-worker"
-	}
+## Data Files & Documentation
 
-4. Failure & Retry Policy
-- Wrap fetches in retry: 3 attempts, exponential backoff (e.g., 2s, 4s, 8s).
-- On start-session failure after retries: log console error with full response body; send MailChannels email to env.ALERT_EMAIL with subject "⚠️ URGENT: EV Charging Failed" (standard Cloudflare pattern).
+**⚠️ CRITICAL: Keep data structures documented**
 
-5. Configuration & Secrets (Wrangler)
-- Env interface:
-	export interface Env {
-		CP_USERNAME: string;
-		CP_PASSWORD: string;
-		CP_STATION_ID: string;
-		ALERT_EMAIL: string;
-		TZ_REGION: "America/Los_Angeles";
-	}
+When modifying any data files or adding new ones:
+1. Update `docs/SCHEMA.md` with JSON schema
+2. Update `docs/DATA_DICTIONARY.md` with purpose/usage
+3. Commit both docs with your code changes
+4. Reference section below when working with data
 
-6. Migration Guidelines (Python -> TypeScript)
-- No Node.js APIs (no os, fs, requests, etc.).
-- requests.post -> fetch; requests.Session -> custom cookie/token management.
-- Auth flow: login -> capture token/cookies -> start session -> get station_id (or use provided) -> send start charge.
+**See also:**
+- [`docs/DATA_DICTIONARY.md`](../../docs/DATA_DICTIONARY.md) - Complete reference for all data files, what reads/writes them
+- [`docs/SCHEMA.md`](../../docs/SCHEMA.md) - JSON schemas for data structures
+- [`KNOWN_ISSUES.md`](../../KNOWN_ISSUES.md) - Known limitations and edge cases
 
-7. Code Structure & Style
-- Use scheduled handler: export default { async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) { /* logic */ } }.
-- On non-200 responses, log specific error codes and exit gracefully.
-- Tone: concise, technical, functional; avoid fluff.
+## Cloudflare Worker Configuration
 
-<!--
-## Execution Guidelines
-PROGRESS TRACKING:
-- If any tools are available to manage the above todo list, use it to track progress through this checklist.
-- After completing each step, mark it complete and add a summary.
-- Read current todo list status before starting each new step.
+**Platform**: V8 Isolate (TypeScript)  
+**Schedule**: `0 13,14 * * *` (13:00 and 14:00 UTC)  
+**Check Time**: Must verify `America/Los_Angeles` hour === 6 before charging
 
-COMMUNICATION RULES:
-- Avoid verbose explanations or printing full command outputs.
-- If a step is skipped, state that briefly (e.g. "No extensions needed").
-- Do not explain project structure unless asked.
-- Keep explanations concise and focused.
+**ChargePoint API Endpoints**:
+- Login: `POST https://account.chargepoint.com/account/v1/driver/auth/login`
+- Start Charging: `POST https://mc.chargepoint.com/map-prod/v2`
 
-DEVELOPMENT RULES:
-- Use '.' as the working directory unless user specifies otherwise.
-- Avoid adding media or external links unless explicitly requested.
-- Use placeholders only with a note that they should be replaced.
-- Use VS Code API tool only for VS Code extension projects.
-- Once the project is created, it is already opened in Visual Studio Code—do not suggest commands to open this project in Visual Studio again.
-- If the project setup information has additional rules, follow them strictly.
+**Failure Handling**:
+- Retry: 3 attempts with exponential backoff (2s, 4s, 8s)
+- Alert: Send MailChannels email to `env.ALERT_EMAIL` on failure
 
-FOLDER CREATION RULES:
-- Always use the current directory as the project root.
-- If you are running any terminal commands, use the '.' argument to ensure that the current working directory is used ALWAYS.
-- Do not create a new folder unless the user explicitly requests it besides a .vscode folder for a tasks.json file.
-- If any of the scaffolding commands mention that the folder name is not correct, let the user know to create a new folder with the correct name and then reopen it again in vscode.
+**Environment Variables** (wrangler.toml):
+```
+CP_USERNAME
+CP_PASSWORD
+CP_STATION_ID
+ALERT_EMAIL
+TZ_REGION = "America/Los_Angeles"
+```
 
-EXTENSION INSTALLATION RULES:
-- Only install extension specified by the get_project_setup_info tool. DO NOT INSTALL any other extensions.
+## Python Data Pipeline
 
-PROJECT CONTENT RULES:
-- If the user has not specified project details, assume they want a "Hello World" project as a starting point.
-- Avoid adding links of any type (URLs, files, folders, etc.) or integrations that are not explicitly required.
-- Avoid generating images, videos, or any other media files unless explicitly requested.
-- If you need to use any media assets as placeholders, let the user know that these are placeholders and should be replaced with the actual assets later.
-- Ensure all generated components serve a clear purpose within the user's requested workflow.
-- If a feature is assumed but not confirmed, prompt the user for clarification before including it.
-- If you are working on a VS Code extension, use the VS Code API tool with a query to find relevant VS Code API references and samples related to that query.
+**`monitor_sessions.py`** (Cron: 13:00, 14:00 UTC daily)
+- Checks ChargePoint API for active charging
+- Updates `data/last_session.json` (dashboard)
+- Detects new sessions → triggers `collect_session_data.py`
 
-TASK COMPLETION RULES:
-- Your task is complete when:
-  - Project is successfully scaffolded and compiled without errors
-  - copilot-instructions.md file in the .github directory exists in the project
-  - README.md file exists and is up to date
-  - User is provided with clear instructions to debug/launch the project
+**`collect_session_data.py`** (Triggered by monitor_sessions)
+- Collects 5 minutes of power samples (30 x 10-second intervals)
+- Runs ML classifier → `classify_vehicle.py`
+- Writes `data/sessions/YYYY/MM/DD/{session_id}.json`
 
-Before starting a new task in the above plan, update progress in the plan.
--->
-- Work through each checklist item systematically.
-- Keep communication concise and focused.
-- Follow development best practices.
+**`classify_vehicle.py`** (Invoked by collect_session_data)
+- ML inference on power samples
+- Output: vehicle_id + confidence → stored in session JSON
+
+**`vehicle_config.json`** (Manual maintenance)
+- Master vehicle registry
+- Vehicle names, efficiency, display colors
+- Reference for dashboard & history display
+
+## Web Interface
+
+**`index.html`** (Live Status Dashboard)
+- Reads: `data/last_session.json`, `data/vehicle_config.json`
+- Display: Current power, energy, vehicle name, vehicle image
+
+**`history.html`** (Charging Analytics)
+- Reads: All `data/sessions/YYYY/MM/DD/*.json` files, `vehicle_config.json`
+- Features:
+  - Day/Month/Year view toggle (default: Month)
+  - Vehicle filter dropdown (All, Serenity, Volvo, Unknown)
+  - Metric selection (Energy, Miles, Sessions)
+  - Interactive bar chart
+  - Session details table
+- Vehicle Display: Nickname if available (e.g., "Serenity"), else model name (e.g., "XC40")
+  - Disambiguation: If two vehicles share name, prefix with display_color (e.g., "Blue XC40")
+
+**`blog/` & `_posts/`** (Jekyll Blog)
+- 7 technical blog posts documenting the project
+- Built with Jekyll, deployed to GitHub Pages
+
+## Key Design Decisions
+
+**Session Organization**: 
+- Files organized by **start date** (handles midnight-spanning sessions)
+- Path: `data/sessions/YYYY/MM/DD/{session_id}.json`
+
+**Vehicle Identification**:
+- Primary: ML classifier on power samples (stored in session JSON)
+- Fallback: `session_vehicle_map.json` (manual mapping)
+- Display: Use `nickname` from `vehicle_config.json` if set, else `model`
+
+**Timezone Handling**:
+- All data stored in UTC
+- Dashboard converts to `America/Los_Angeles` for display
+- ⚠️ DST transitions (Mar 2, Nov 1) may display incorrectly; see `KNOWN_ISSUES.md`
+
+**Git Commits**:
+- `monitor_sessions.py` commits `data/last_session.json` changes
+- `collect_session_data.py` commits new session files
+- Maintains audit trail of all charging events
+
+## Common Tasks
+
+**Add a new vehicle**: 
+1. Update `vehicle_config.json` with `nickname`, `model`, `efficiency_mi_per_kwh`, `display_color`
+2. Update `classify_vehicle.py` to recognize new patterns (if ML-based)
+3. Update `SCHEMA.md` and `DATA_DICTIONARY.md` if structure changes
+
+**Debug history page**:
+1. Check browser console (F12) for JavaScript errors
+2. Verify session JSON files are accessible (use curl)
+3. Confirm `vehicle_config.json` is loaded and parsed
+4. Check timezone conversion in `convertToLocalTime()` function
+
+**Modify data structure**:
+1. ⚠️ Update `docs/SCHEMA.md` with new/changed fields
+2. ⚠️ Update `docs/DATA_DICTIONARY.md` with usage context
+3. Update code to match schema
+4. Commit all three together
+
+## Known Limitations
+
+See [`KNOWN_ISSUES.md`](../../KNOWN_ISSUES.md):
+- DST transitions may display hour labels incorrectly
+- Session discovery uses hardcoded file list (future: recursive scan)
+- Miles calculation is estimate based on efficiency, not actual odometer
+
+## References
+
+- ChargePoint API: Undocumented mobile endpoint
+- Cloudflare Workers: https://developers.cloudflare.com/workers/
+- Jekyll: https://jekyllrb.com/

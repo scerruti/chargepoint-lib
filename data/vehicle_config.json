@@ -1,7 +1,6 @@
 {
   "vehicles": {
     "serenity_equinox_2024": {
-      "name": "2024 Chevrolet Equinox EV 2LT",
       "nickname": "Serenity",
       "year": 2024,
       "make": "Chevrolet",
@@ -9,12 +8,13 @@
       "trim": "2LT",
       "battery_capacity_kwh": 85,
       "max_charge_rate_kw": 11.5,
-      "color": "#2C5F8D",
-      "characteristics": "Higher power draw, very consistent charging pattern",
-      "icon": "🚙"
+      "paint_color": "Bursting Blue",
+      "paint_color_hex": "#2C5F8D",
+      "display_color": "Blue",
+      "efficiency_mi_per_kwh": 2.38,
+      "characteristics": "Higher power draw, very consistent charging pattern"
     },
     "volvo_xc40_2021": {
-      "name": "2021 Volvo XC40 Recharge P8",
       "nickname": "Volvo",
       "year": 2021,
       "make": "Volvo",
@@ -22,10 +22,13 @@
       "trim": "P8",
       "battery_capacity_kwh": 78,
       "max_charge_rate_kw": 11.0,
-      "color": "#004B87",
-      "characteristics": "Lower power draw, more variable charging pattern",
-      "icon": "🚗"
+      "paint_color": "Midnight Blue",
+      "paint_color_hex": "#004B87",
+      "display_color": "Blue",
+      "efficiency_mi_per_kwh": 2.56,
+      "characteristics": "Lower power draw, more variable charging pattern"
     }
   },
-  "last_updated": "2026-01-09T00:00:00Z"
+  "last_updated": "2026-01-10T00:00:00Z"
+}
 }

@@ -152,8 +152,8 @@ permalink: /history/
     <div class="control-group">
         <label>View:</label>
         <div class="view-buttons">
-            <button class="view-btn active" data-view="day" onclick="changeView('day')">Day</button>
-            <button class="view-btn" data-view="month" onclick="changeView('month')">Month</button>
+            <button class="view-btn" data-view="day" onclick="changeView('day')">Day</button>
+            <button class="view-btn active" data-view="month" onclick="changeView('month')">Month</button>
             <button class="view-btn" data-view="year" onclick="changeView('year')">Year</button>
         </div>
     </div>
@@ -162,8 +162,8 @@ permalink: /history/
         <label>Vehicle:</label>
         <select id="vehicle-filter" onchange="applyFilters()">
             <option value="all">All Vehicles</option>
-            <option value="volvo">Volvo XC40</option>
-            <option value="equinox">Equinox</option>
+            <option value="serenity_equinox_2024">Serenity</option>
+            <option value="volvo_xc40_2021">Volvo</option>
             <option value="unknown">Unknown</option>
         </select>
     </div>
@@ -219,29 +219,28 @@ permalink: /history/
 <script>
     // State
     let allSessions = [];
-    let currentView = 'day'; // day, month, year
+    let currentView = 'month'; // day, month, year (default: month)
     let currentDate = new Date();
     let chart = null;
-    
-    // Vehicle display names
-    const vehicleNames = {
-        'volvo': 'Volvo XC40',
-        'equinox': 'Equinox',
-        'unknown': 'Unknown'
-    };
-    
-    // Vehicle efficiency (miles per kWh)
-    const vehicleEfficiency = {
-        'volvo': 2.56,      // ~256 mi / 100 kWh
-        'equinox': 2.38,    // ~238 mi / 100 kWh
-        'unknown': 2.5
-    };
+    let vehicleConfig = {};
     
     async function discoverSessions() {
         /**
          * Discovers all session files recursively from data/sessions/ directory.
          * For now, loads from GitHub raw URL by constructing paths.
          */
+        
+        // Load vehicle configuration
+        try {
+            const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/data/vehicle_config.json?t=${Date.now()}`);
+            if (response.ok) {
+                const config = await response.json();
+                vehicleConfig = config.vehicles || {};
+            }
+        } catch (e) {
+            console.warn('Could not load vehicle config:', e);
+        }
+        
         allSessions = [];
         
         // Known session files (will expand as new sessions are collected)
@@ -276,6 +275,35 @@ permalink: /history/
         console.log(`Loaded ${allSessions.length} sessions`);
     }
     
+    function getVehicleDisplayName(vehicleId) {
+        /**
+         * Get the display name for a vehicle based on config.
+         * Logic: If vehicle has nickname, use it. Otherwise use model.
+         * If two vehicles share the same name and display_color disambiguates, prefix with color.
+         */
+        if (!vehicleId || vehicleId === 'unknown') return 'Unknown';
+        
+        const vehicle = vehicleConfig[vehicleId];
+        if (!vehicle) return vehicleId;
+        
+        const displayName = vehicle.nickname || vehicle.model;
+        
+        // Check if another vehicle has the same display name
+        const others = Object.entries(vehicleConfig)
+            .filter(([id, _]) => id !== vehicleId)
+            .filter(([_, v]) => (v.nickname || v.model) === displayName);
+        
+        if (others.length > 0) {
+            // Check if display_color can disambiguate
+            const sameColor = others.some(([_, v]) => v.display_color === vehicle.display_color);
+            if (!sameColor && vehicle.display_color) {
+                return `${vehicle.display_color} ${vehicle.model}`;
+            }
+        }
+        
+        return displayName;
+    }
+    
     function parseCollectionSession(data) {
         /**
          * Parse the collection_start format (5-minute sample collection)
@@ -292,7 +320,8 @@ permalink: /history/
         
         // Estimate miles from energy and vehicle efficiency
         const vehicleId = data.vehicle_id || 'unknown';
-        const efficiency = vehicleEfficiency[vehicleId] || 2.5;
+        const vehicle = vehicleConfig[vehicleId];
+        const efficiency = vehicle?.efficiency_mi_per_kwh || 2.5;
         const miles = energy * efficiency;
         
         return {
@@ -304,6 +333,7 @@ permalink: /history/
             energy: energy,
             miles: miles,
             vehicleId: vehicleId,
+            vehicleDisplayName: getVehicleDisplayName(vehicleId),
             confidence: data.vehicle_confidence || 0,
             location: 'Home Charger'
         };
@@ -321,6 +351,8 @@ permalink: /history/
         const localStartTime = convertToLocalTime(startTime);
         const duration = session.session_time_ms ? Math.round(session.session_time_ms / 1000 / 60) : null;
         
+        const vehicleId = data.vehicle_id || 'unknown';
+        
         return {
             id: data.session_id,
             startTime: startTime,
@@ -329,7 +361,8 @@ permalink: /history/
             duration: duration,
             energy: session.energy_kwh || 0,
             miles: session.miles_added || 0,
-            vehicleId: data.vehicle_id || 'unknown',
+            vehicleId: vehicleId,
+            vehicleDisplayName: getVehicleDisplayName(vehicleId),
             confidence: data.vehicle_confidence || 0,
             location: location.address || 'Unknown'
         };
@@ -659,7 +692,7 @@ permalink: /history/
         tbody.innerHTML = sorted.map(s => `
             <tr>
                 <td>${formatDateTime(s.localStartTime)}</td>
-                <td>${vehicleNames[s.vehicleId] || s.vehicleId}</td>
+                <td>${s.vehicleDisplayName}</td>
                 <td>${s.energy.toFixed(1)}</td>
                 <td>${s.miles.toFixed(1)}</td>
                 <td>${s.duration ? s.duration + ' min' : '—'}</td>

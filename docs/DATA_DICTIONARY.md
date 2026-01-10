@@ -147,6 +147,7 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 **File Size**: ~5-10 KB per month (very lightweight, fast to load)
 
+
 **Minimal Structure** (array of sessions):
 ```json
 [
@@ -154,11 +155,7 @@ This document describes all data files in the CPH50 Control system, their purpos
     "session_id": "4751613101",
     "session_start_time": "2026-01-10T14:00:01+00:00",
     "session_end_time": "2026-01-10T22:30:15+00:00",
-    "energy_kwh": 51.22,
-    "vehicle": {
-      "id": "serenity_equinox_2024",
-      "confidence": 0.95
-    }
+    "energy_kwh": 51.22
   },
   ...additional sessions...
 ]
@@ -169,14 +166,11 @@ This document describes all data files in the CPH50 Control system, their purpos
 - `session_start_time`: UTC timestamp of session start
 - `session_end_time`: UTC timestamp of session end (null if still charging)
 - `energy_kwh`: Total energy delivered (number or null)
-- `vehicle.id`: Vehicle key to `vehicle_config.json` (null if unknown)
-- `vehicle.confidence`: ML classifier confidence 0-1 (null if unknown)
 
 **Notes**:
 - Minimal structure: only essential data for history display
-- Duration, vehicle name, and efficiency looked up at display time
+- Duration, vehicle name, and efficiency looked up at display time using session_vehicle_map and vehicle_config
 - Organized by month (YYYY-MM.json) for efficient history page loading
-- Vehicle classification merged from `data/sessions/{date}/{id}.json` during creation
 - Atomic writes (temp file + rename) prevent corruption
 - Each commit shows full month snapshot for audit trail
 
@@ -255,6 +249,7 @@ This document describes all data files in the CPH50 Control system, their purpos
   - Any analysis/reporting that needs vehicle truth
 **Frequency**: Updated after each charging session is classified
 
+
 **Structure**:
 ```json
 {
@@ -267,8 +262,8 @@ This document describes all data files in the CPH50 Control system, their purpos
     },
     "4754846071": {
       "vehicle": "serenity_equinox_2024",
-      "confidence": 0.88,
-      "source": "classifier",
+      "confidence": null,
+      "source": "manual",
       "labeled_at": "2026-01-09T22:15:00+00:00"
     }
   },
@@ -284,9 +279,12 @@ This document describes all data files in the CPH50 Control system, their purpos
 }
 ```
 
+*Example values above are illustrative. For manual assignments, `confidence` may be `null`.*
+
+
 **Fields**:
 - `vehicle`: Key to `vehicle_config.json` (e.g., "serenity_equinox_2024")
-- `confidence`: 0-1 confidence score from ML classifier
+- `confidence`: 0-1 confidence score from ML classifier, or `null` for manual assignments
 - `source`: How vehicle was identified ("classifier", "manual", "chargepoint_corrected", etc)
 - `labeled_at`: ISO timestamp of when assignment was made
 

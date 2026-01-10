@@ -14,7 +14,7 @@ File: `data/session_cache/YYYY-MM.json`
   "description": "Minimal session data cached for history display. Array of sessions organized by month.",
   "items": {
     "type": "object",
-    "required": ["session_id", "session_start_time", "session_end_time", "energy_kwh", "vehicle"],
+    "required": ["session_id", "session_start_time", "session_end_time", "energy_kwh"],
     "properties": {
       "session_id": {
         "type": ["string", "integer"],
@@ -34,22 +34,7 @@ File: `data/session_cache/YYYY-MM.json`
         "type": ["number", "null"],
         "description": "Total energy delivered in kilowatt-hours"
       },
-      "vehicle": {
-        "type": "object",
-        "required": ["id", "confidence"],
-        "properties": {
-          "id": {
-            "type": ["string", "null"],
-            "description": "Vehicle identifier (key to vehicle_config.json), null if unknown"
-          },
-          "confidence": {
-            "type": ["number", "null"],
-            "minimum": 0,
-            "maximum": 1,
-            "description": "ML classifier confidence score (0-1), null if unknown"
-          }
-        }
-      }
+      
     }
   }
 }

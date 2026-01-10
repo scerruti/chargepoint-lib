@@ -2,24 +2,21 @@
   "sessions": {
     "4751613101": {
       "vehicle": "volvo_xc40_2021",
-      "vehicle_name": "2021 Volvo XC40 Recharge",
-      "session_date": "2026-01-09",
-      "energy_kwh": 51.222198,
-      "miles_added": 131.34,
-      "duration_hours": 6.0,
-      "source": "chargepoint_web_ui",
-      "confidence": "high"
+      "confidence": null,
+      "source": "manual",
+      "labeled_at": "2026-01-09T17:30:00Z"
     },
     "4754846071": {
       "vehicle": "serenity_equinox_2024",
-      "vehicle_name": "2024 Chevrolet Equinox EV",
-      "session_date": "2026-01-09",
-      "energy_kwh": 45.512299,
-      "miles_added": 116.70,
-      "duration_hours": 5.4,
-      "source": "chargepoint_web_ui_manual_capture",
-      "confidence": "high",
-      "note": "API reported as Volvo; corrected to Equinox via browser capture"
+      "confidence": null,
+      "source": "manual",
+      "labeled_at": "2026-01-09T17:30:00Z"
+    },
+    "4758000341": {
+      "vehicle": "volvo",
+      "confidence": 0.6649705730742851,
+      "source": "classifier",
+      "labeled_at": "2026-01-10T20:50:55.801712+00:00"
     }
   },
   "unknown_sessions": [],

@@ -217,17 +217,8 @@ class ChargePointDirectAPI:
     def get_session_history(self, page_size: int = 50, 
                            show_address: bool = True) -> Optional[Dict[str, Any]]:
         """
-        Get monthly charging activity history via /map-prod/v2 endpoint.
-        
-        This calls the undocumented charging_activity_monthly endpoint which returns
-        all sessions for the user, organized by month.
-        
-        Args:
-            page_size: Number of sessions per page (default 50)
-            show_address: Whether to include address info for home sessions
-        
-        Returns:
-            Dict containing charging activity data with sessions organized by month
+        Get a single page of charging activity history via /map-prod/v2 endpoint.
+        Use get_session_history_paginated to retrieve all pages.
         """
         payload = {
             "charging_activity_monthly": {
@@ -249,6 +240,59 @@ class ChargePointDirectAPI:
         except Exception as e:
             print(f"Error fetching charging activity history: {e}")
             return None
+
+    def get_session_history_paginated(self, page_size: int = 200, max_pages: int = 20,
+                                      show_address: bool = True) -> List[Dict[str, Any]]:
+        """
+        Fetch all charging activity pages until depletion or max_pages.
+        Returns a flat list of sessions.
+        """
+        headers = {
+            "accept": "*/*",
+            "origin": "https://driver.chargepoint.com",
+            "referer": "https://driver.chargepoint.com/",
+            "x-requested-with": "XMLHttpRequest"
+        }
+
+        all_sessions: List[Dict[str, Any]] = []
+        seen_ids = set()
+
+        for page in range(1, max_pages + 1):
+            payload = {
+                "charging_activity_monthly": {
+                    "page_size": page_size,
+                    "show_address_for_home_sessions": show_address,
+                    "page_number": page
+                }
+            }
+
+            try:
+                result = self._make_request(self.MAP_PROD_URL, payload, headers)
+            except Exception as e:
+                print(f"Error fetching page {page}: {e}")
+                break
+
+            page_sessions = self.extract_sessions_from_activity(result)
+            if not page_sessions:
+                break
+
+            new_count = 0
+            for s in page_sessions:
+                sid = s.get("session_id") or s.get("sessionId")
+                if sid and sid not in seen_ids:
+                    seen_ids.add(sid)
+                    all_sessions.append(s)
+                    new_count += 1
+
+            if new_count == 0:
+                # No new sessions found; stop to avoid infinite loop
+                break
+
+            # Heuristic: if fewer than page_size returned, likely last page
+            if len(page_sessions) < page_size:
+                break
+
+        return all_sessions
     
     def extract_sessions_from_activity(self, activity_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """

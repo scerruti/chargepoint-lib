@@ -202,15 +202,8 @@ def fetch_all_sessions():
     try:
         client = ChargePointDirectAPI(username=username, password=password)
         
-        # Fetch charging activity history (returns all sessions)
-        activity_data = client.get_session_history(page_size=100)
-        
-        if not activity_data:
-            print("ERROR: Could not fetch charging activity from ChargePoint")
-            return False
-        
-        # Extract sessions from activity data
-        sessions = client.extract_sessions_from_activity(activity_data)
+        # Fetch all charging activity pages (handles pagination)
+        sessions = client.get_session_history_paginated(page_size=200, max_pages=30)
         
         if not sessions:
             print("WARNING: No sessions found in activity data")

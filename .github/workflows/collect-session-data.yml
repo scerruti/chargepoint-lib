@@ -42,3 +42,10 @@ jobs:
         SESSION_ID: ${{ inputs.session_id }}
       run: |
         python collect_session_data.py "$SESSION_ID"
+    
+    - name: Fetch and cache full session details
+      env:
+        CP_USERNAME: ${{ secrets.CP_USERNAME }}
+        CP_PASSWORD: ${{ secrets.CP_PASSWORD }}
+      run: |
+        python fetch_session_details.py "${{ inputs.session_id }}"

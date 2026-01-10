@@ -1,9 +1,9 @@
 {
   "session_id": "4758000341",
-  "timestamp": "2026-01-10T14:40:40.752358+00:00",
-  "detected_at": "2026-01-10 06:40:40 PST",
-  "power_kw": 8.5907,
-  "energy_kwh": 56.854099,
+  "timestamp": "2026-01-10T14:48:43.728732+00:00",
+  "detected_at": "2026-01-10 06:48:43 PST",
+  "power_kw": 8.6075,
+  "energy_kwh": 57.5667,
   "duration_minutes": null,
   "vehicle_id": null,
   "vehicle_confidence": null,
@@ -15,8 +15,8 @@
     "last_connected_at": "2023-02-03T07:44:32+00:00",
     "session_id": "4758000341",
     "charging": true,
-    "power_kw": 8.5907,
-    "energy_kwh": 56.854099,
+    "power_kw": 8.6075,
+    "energy_kwh": 57.5667,
     "duration_minutes": null
   }
 }

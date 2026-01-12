@@ -4,6 +4,13 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 ## Data Files
 
+### data/cache/cp_session_token.txt
+* **Purpose:** Stores the ChargePoint API session token for credential/session reuse and ban prevention.
+* **Usage:** Read on DAL initialization to resume session; written after login or token refresh.
+* **Format:** Plain text, single line session token string.
+* **Lifecycle:** Updated after every successful login or token refresh. Deleted if session expires or is invalid.
+* **Security:** Should be protected; do not commit to source control.
+
 ### `data/last_session.json`
 **Purpose**: Dashboard snapshot of the current/most recent charging session  
 **Format**: Flat JSON object  
@@ -86,6 +93,7 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 ### `data/vehicle_config.json`
 **Purpose**: Master vehicle metadata and configuration  
+- `valid_periods`: List of date ranges (objects with `start` and optional `end`) when this vehicle is valid for classification. If `end` is null or missing, range is open-ended.
 **Format**: Structured JSON with vehicle dictionary  
 **Created/Updated by**: Manual (user updates)  
 **Read by**: 

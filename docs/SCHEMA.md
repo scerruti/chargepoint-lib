@@ -2,6 +2,13 @@
 
 JSON schemas for all data structures in CPH50 Control.
 
+## Session Token Cache Schema
+
+File: `data/cache/cp_session_token.txt`
+
+Type: string
+Description: ChargePoint API session token for credential/session reuse. No structure; single line string.
+
 ## Session Cache Schema
 
 File: `data/session_cache/YYYY-MM.json`

@@ -15,12 +15,16 @@ from pathlib import Path
 from python_chargepoint import ChargePoint
 from python_chargepoint.exceptions import ChargePointCommunicationException
 
-# Import classifier
+# Import classifier - try library first, fall back to local module
 try:
-    from classify_vehicle import VehicleClassifier
+    from vehicle_classifier import VehicleClassifier
     CLASSIFIER_AVAILABLE = True
 except ImportError:
-    CLASSIFIER_AVAILABLE = False
+    try:
+        from classify_vehicle import VehicleClassifier
+        CLASSIFIER_AVAILABLE = True
+    except ImportError:
+        CLASSIFIER_AVAILABLE = False
 
 
 def update_session_vehicle_map(session_id, vehicle_id, vehicle_confidence, source="collector"):

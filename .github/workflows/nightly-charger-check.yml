@@ -1,10 +1,6 @@
 name: Nightly Charger Check (8 PM PST)
 
 on:
-  schedule:
-    # Run at 4:00 AM UTC (8:00 PM PST previous day)
-    # Run at 5:00 AM UTC (8:00 PM PDT previous day)
-    - cron: '0 4,5 * * *'
   workflow_dispatch: # Manual trigger for testing
 
 jobs:

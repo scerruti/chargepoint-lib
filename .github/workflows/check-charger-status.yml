@@ -2,9 +2,6 @@ name: Check Charger Status
 
 on:
   workflow_dispatch: # Manual trigger only
-  schedule:
-    # Run every 6 hours for monitoring
-    - cron: '0 */6 * * *'
 
 jobs:
   check-status:

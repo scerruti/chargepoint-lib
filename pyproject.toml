@@ -15,3 +15,4 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]  # scan the current directory for packages
 include = ["chargepoint_dal*"]
+include = ["chargepoint_dal*", "vehicle_classifier*"]

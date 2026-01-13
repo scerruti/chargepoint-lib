@@ -1,0 +1,1 @@
+# PyWebview GUI package marker

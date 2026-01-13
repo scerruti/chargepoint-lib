@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ChargePoint Session Analytics</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="dashboard">
+        <h1>ChargePoint Session Analytics</h1>
+        <div id="controls">
+            <select id="year-select"></select>
+            <select id="month-select"></select>
+        </div>
+        <table id="session-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Start Time</th>
+                    <th>Duration</th>
+                    <th>Energy (kWh)</th>
+                    <th>Vehicle</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+    <script src="dashboard.js"></script>
+</body>
+</html>

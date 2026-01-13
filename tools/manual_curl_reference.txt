@@ -1,0 +1,22 @@
+# Manual curl statement for ChargePoint session retrieval
+
+curl 'https://mc.chargepoint.com/map-prod/v2' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US' \
+  -H 'content-type: application/json' \
+  -b '<redacted cookies>' \
+  -H 'origin: https://driver.chargepoint.com' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://driver.chargepoint.com/' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?1' \
+  -H 'sec-ch-ua-platform: "Android"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-site' \
+  -H 'user-agent: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36' \
+  -H 'x-requested-with: XMLHttpRequest' \
+  --data-raw '{"charging_status":{"mfhs":{},"session_id":4751613101}}'
+
+# Note: Replace <redacted cookies> with actual session cookies if needed.
+# This reference is for debugging API differences vs. DAL implementation.

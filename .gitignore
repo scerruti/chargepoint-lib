@@ -34,3 +34,11 @@ fly.toml
 
 # Local environment/utility scripts
 set_cp_env.sh
+
+# Backups and temporary files
+backups/
+*.bak
+chargepoint_dal/dal_get_session_activity_patch.py
+
+# Secrets
+data/cache/cp_session_token.txt

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chargepoint_dal"
+version = "0.1.0"
+description = "A caching, rate-limited library for ChargePoint data."
+requires-python = ">=3.8"
+dependencies = [
+    "python-chargepoint",
+    "requests"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]  # scan the current directory for packages
+include = ["chargepoint_dal*"]

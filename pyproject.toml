@@ -3,16 +3,17 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "chargepoint_dal"
+name = "chargepoint-lib"
 version = "0.1.0"
-description = "A caching, rate-limited library for ChargePoint data."
+description = "Core libraries for ChargePoint automation: DAL and Vehicle Classifier."
 requires-python = ">=3.8"
 dependencies = [
     "python-chargepoint",
-    "requests"
+    "requests",
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0"
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]  # scan the current directory for packages
-include = ["chargepoint_dal*"]
 include = ["chargepoint_dal*", "vehicle_classifier*"]

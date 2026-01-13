@@ -5,13 +5,17 @@ def filter_vehicles_by_date(vehicles: dict, session_date: datetime) -> dict:
     Return a dict of vehicles valid for the given session_date based on valid_periods.
     """
     valid = {}
+    from datetime import timezone
+    # Ensure session_date is timezone-aware (UTC)
+    if session_date.tzinfo is None:
+        session_date = session_date.replace(tzinfo=timezone.utc)
     for vid, vinfo in vehicles.items():
         periods = vinfo.get("valid_periods", [])
         for period in periods:
-            start = datetime.strptime(period["start"], "%Y-%m-%d")
+            start = datetime.strptime(period["start"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
             end = None
             if period.get("end"):
-                end = datetime.strptime(period["end"], "%Y-%m-%d")
+                end = datetime.strptime(period["end"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
             if (session_date >= start) and (end is None or session_date <= end):
                 valid[vid] = vinfo
                 break

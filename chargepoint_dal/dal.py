@@ -49,17 +49,55 @@ class ChargePointDAL:
         Returns:
             Session activity dict, or None if not found
         """
+        import logging
+        import os
+        import json
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger("ChargePointDAL")
+
+        # Try to load from per-session cache file first
+        session_cache_dir = "data/session_cache"
+        found_file = None
+        for root, dirs, files in os.walk(session_cache_dir):
+            for file in files:
+                if file == f"{session_id}.json":
+                    found_file = os.path.join(root, file)
+                    break
+            if found_file:
+                break
+        if found_file:
+            logger.debug(f"Loading session activity from cache file: {found_file}")
+            try:
+                with open(found_file, "r") as f:
+                    data = json.load(f)
+                return data
+            except Exception as e:
+                logger.error(f"Failed to load session cache file: {e}")
+                # Fallback to legacy cache/API
+
         cache_key = f"session_activity_{session_id}_{'samples' if include_samples else 'nosamples'}"
+        logger.debug(f"Checking cache for key: {cache_key}")
         with self.lock:
             if cache_key in self.cache:
+                logger.debug(f"Cache hit for {cache_key}")
                 return self.cache[cache_key]
-        payload = {"session_id": session_id, "include_samples": include_samples}
+            else:
+                logger.debug(f"Cache miss for {cache_key}")
+
+        payload = {"charging_status": {"mfhs": {}, "session_id": int(session_id)}}
+        logger.debug(f"Sending API request for session_id={session_id}, include_samples={include_samples}")
         response = self.client.session.post(
             self.client.global_config.endpoints.mapcache + "v2",
             json=payload
         )
         self.ratelimiter.acquire()
-        data = response.json()
+        logger.debug(f"API response status: {response.status_code}")
+        try:
+            data = response.json()
+            logger.debug(f"API response JSON: {data}")
+        except Exception as e:
+            logger.error(f"Failed to parse API response JSON: {e}")
+            data = None
         with self.lock:
             self.cache[cache_key] = data
             self._save_cache()
@@ -67,7 +105,8 @@ class ChargePointDAL:
 
     def __init__(self, username: str, password: str, cache_path: Optional[str] = None,
                  rate_limit: int = 6, rate_period: float = 60.0,
-                 session_token_path: Optional[str] = None):
+                 session_token_path: Optional[str] = None,
+                 git_commit_enabled: bool = False):
         """
         Args:
             username: ChargePoint account username
@@ -97,13 +136,11 @@ class ChargePointDAL:
         # Always cache the latest session token after login
         self._save_session_token(self.client.session_token)
 
-        if cache_path is None:
-            cache_path = "data/cache/chargepoint_dal_cache.json"
-
-        self.cache_path = cache_path
+        self.cache_path = cache_path or "data/cache/chargepoint_dal_cache.json"
         self.cache: Dict[str, Any] = {}
         self.lock = threading.Lock()
         self.ratelimiter = RateLimiter(rate_limit, rate_period)
+        self.git_commit_enabled = git_commit_enabled
         self._load_cache()
 
     def _load_session_token(self) -> Optional[str]:
@@ -124,6 +161,7 @@ class ChargePointDAL:
             pass
 
     def _load_cache(self):
+        # Load legacy cache if present
         try:
             with open(self.cache_path, "r") as f:
                 self.cache = json.load(f)
@@ -131,79 +169,227 @@ class ChargePointDAL:
             self.cache = {}
 
     def _save_cache(self):
-        if not self.cache_path:
-            return
-        with open(self.cache_path, "w") as f:
-            json.dump(self.cache, f)
+        import os, json, subprocess
+        # Save legacy cache for backward compatibility
+        if self.cache_path:
+            with open(self.cache_path, "w") as f:
+                json.dump(self.cache, f)
+            if getattr(self, "git_commit_enabled", False):
+                cache_abspath = os.path.abspath(self.cache_path)
+                try:
+                    subprocess.run(["git", "add", cache_abspath], check=True)
+                    status = subprocess.run(["git", "status", "--porcelain", cache_abspath], capture_output=True, text=True)
+                    if status.stdout.strip():
+                        subprocess.run(["git", "commit", "-m", "Update ChargePoint DAL cache"], check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Warning: git command failed: {e}")
+                except Exception as e:
+                    print(f"Warning: git commit logic error: {e}")
+        # Save per-month session summaries
+        print("[DAL DEBUG] Cache keys:")
+        for key in self.cache.keys():
+            print(f"  [DAL DEBUG] {key}")
+        for key, value in self.cache.items():
+            if key.startswith("sessions_") and isinstance(value, list):
+                print(f"[DAL DEBUG] Considering key for per-month summary: {key}")
+                # Try to extract year/month from key (look for p_{year}_{month})
+                import re
+                match = re.search(r"p_(\d{4})_(\d{2})", key)
+                if match:
+                    y, m = match.group(1), match.group(2)
+                    print(f"[DAL DEBUG] Writing per-month summary for {y}-{m}")
+                    month_path = f"data/cache/sessions/{y}/{m}.json"
+                    os.makedirs(os.path.dirname(month_path), exist_ok=True)
+                    with open(month_path, "w") as f:
+                        json.dump(value, f)
+                    if getattr(self, "git_commit_enabled", False):
+                        month_abspath = os.path.abspath(month_path)
+                        try:
+                            subprocess.run(["git", "add", month_abspath], check=True)
+                            status = subprocess.run(["git", "status", "--porcelain", month_abspath], capture_output=True, text=True)
+                            if status.stdout.strip():
+                                subprocess.run(["git", "commit", "-m", f"Update session summaries for {y}-{m}"], check=True)
+                        except subprocess.CalledProcessError as e:
+                            print(f"Warning: git command failed: {e}")
+                        except Exception as e:
+                            print(f"Warning: git commit logic error: {e}")
+        # Save per-session activity details
+        for key, value in self.cache.items():
+            if key.startswith("session_activity_") and isinstance(value, dict):
+                # Try to extract session_id from key
+                parts = key.split("_")
+                if len(parts) >= 3:
+                    session_id = parts[2]
+                    # Optionally extract year/month from value
+                    start_time = None
+                    if "charging_status" in value and "start_time" in value["charging_status"]:
+                        import datetime
+                        ts = value["charging_status"]["start_time"] // 1000
+                        dt = datetime.datetime.utcfromtimestamp(ts)
+                        y, m = dt.year, f"{dt.month:02d}"
+                        session_path = f"data/session_cache/{y}/{m}/{session_id}.json"
+                        os.makedirs(os.path.dirname(session_path), exist_ok=True)
+                        with open(session_path, "w") as f:
+                            json.dump(value, f)
+                        if getattr(self, "git_commit_enabled", False):
+                            session_abspath = os.path.abspath(session_path)
+                            try:
+                                subprocess.run(["git", "add", session_abspath], check=True)
+                                status = subprocess.run(["git", "status", "--porcelain", session_abspath], capture_output=True, text=True)
+                                if status.stdout.strip():
+                                    subprocess.run(["git", "commit", "-m", f"Update session activity {session_id}"], check=True)
+                            except subprocess.CalledProcessError as e:
+                                print(f"Warning: git command failed: {e}")
+                            except Exception as e:
+                                print(f"Warning: git commit logic error: {e}")
 
     def get_sessions(self, max_batches: int = 10, batch_size: int = 10, year: int = None, month: int = None) -> List[Dict[str, Any]]:
         """
-        Fetches charging sessions, using cache if available.
-        Args:
-            max_batches: Maximum number of batches to fetch
-            batch_size: Number of sessions per batch
-            year: Optional year for monthly paging (e.g., 2025)
-            month: Optional month for monthly paging (1-12)
-        Returns:
-            List of session dicts
+        Fetches charging sessions with 'Smart Stop' logic to prevent API bans.
+        Checks batch timestamps to stop as soon as we pass the target month.
         """
-        page_offset = None
-        if year is not None and month is not None:
-            page_offset = f"p_{year}_{month:02d}"
-        cache_key = f"sessions_{max_batches}_{batch_size}_{page_offset or 'all'}"
-        with self.lock:
-            if cache_key in self.cache:
-                return self.cache[cache_key]
+        import os, json, datetime
+        
+        if year is None or month is None:
+            raise ValueError("Year and month must be specified")
+            
+        cache_key = f"sessions_{year}_{month:02d}"
+        cache_path = f"data/cache/sessions/{year}/{month:02d}.json"
+        now = datetime.datetime.utcnow()
+        
+        # Calculate strict boundaries for the target month
+        start_of_target = datetime.datetime(year, month, 1)
+        if month == 12:
+            end_of_target = datetime.datetime(year + 1, 1, 1)
+        else:
+            end_of_target = datetime.datetime(year, month + 1, 1)
+
+        # 1. Try to load cache file first (Safe: No API calls)
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, "r") as f:
+                    cache_data = json.load(f)
+                date_retrieved = cache_data.get("date_retrieved")
+                if date_retrieved:
+                    retrieved_dt = datetime.datetime.fromisoformat(date_retrieved)
+                    # If we cached this AFTER the month ended, the data is final. Use it.
+                    if retrieved_dt >= end_of_target:
+                        return cache_data.get("sessions", [])
+            except Exception as e:
+                print(f"[DAL ERROR] Failed to load cache: {e}")
+
+        # 2. Fetch from API (Carefully)
         sessions = []
-        # Initial request payload
-        payload = {"charging_activity_monthly": {"page_size": batch_size, "show_address_for_home_sessions": True}}
-        if page_offset:
-            payload["charging_activity_monthly"]["page_offset"] = page_offset
+        page_offset = f"p_{year}_{month:02d}" # Starting hint, but we might need to scroll
+        
+        # NOTE: If we are looking for a past month, we might need to start blank 
+        # to let the API give us the newest and scroll back. 
+        # However, keeping your existing offset logic for now as it seems to be a ChargePoint optimization.
+        payload = {
+            "charging_activity_monthly": {
+                "page_size": batch_size, 
+                "show_address_for_home_sessions": True, 
+                "page_offset": page_offset
+            }
+        }
+        
+        last_offset = None
+
+        for i in range(max_batches):
+            print(f"[DAL DEBUG] Fetching batch {i+1}/{max_batches}...")
+            
+            # -- API CALL --
             response = self.client.session.post(
                 self.client.global_config.endpoints.mapcache + "v2",
-            json=payload
-        )
-        self.ratelimiter.acquire()
-        data = response.json()
-        activity = data.get("charging_activity")
-        if activity:
-            sessions.extend(activity.get("sessions", []))
-            page_offset = activity.get("page_offset")
-        else:
-            # Try alternate format: charging_activity_monthly → month_info → [0] → sessions
-            monthly = data.get("charging_activity_monthly")
-            if monthly and "month_info" in monthly and monthly["month_info"]:
-                month_info = monthly["month_info"][0]
-                if "sessions" in month_info:
-                    sessions.extend(month_info["sessions"])
-                    page_offset = data.get("page_offset") or monthly.get("page_offset")
-            else:
-                print("No 'charging_activity' or 'charging_activity_monthly' in response:", data)
-                return sessions
-        for i in range(max_batches - 1):
-            if page_offset == "last_page":
-                break
-            payload["charging_activity_monthly"]["page_offset"] = page_offset
-            response = self.client.session.post(
-                    self.client.global_config.endpoints.mapcache + "v2",
                 json=payload
             )
-            self.ratelimiter.acquire()
-            data = response.json()
-            activity = data.get("charging_activity")
-            if not activity:
-                print("No 'charging_activity' in response:", data)
+            self.ratelimiter.acquire() # Strict adherence to your rate limit
+            # --------------
+
+            try:
+                data = response.json()
+            except json.JSONDecodeError:
+                print("[DAL ERROR] API returned non-JSON response")
                 break
-            sessions.extend(activity.get("sessions", []))
-            page_offset = activity.get("page_offset")
+
+            # Extract sessions from the messy response structure
+            batch_sessions = []
+            next_offset = None
+            
+            # Support both API response formats
+            if "charging_activity" in data and "sessions" in data["charging_activity"]:
+                batch_sessions = data["charging_activity"]["sessions"]
+                next_offset = data["charging_activity"].get("page_offset")
+            elif "charging_activity_monthly" in data:
+                month_info = data["charging_activity_monthly"].get("month_info")
+                if month_info and isinstance(month_info, list) and len(month_info) > 0:
+                    batch_sessions = month_info[0].get("sessions", [])
+                next_offset = data["charging_activity_monthly"].get("page_offset")
+
+            if not batch_sessions:
+                print(f"[DAL DEBUG] Batch {i+1} empty. Stopping.")
+                break
+
+            # 3. Analyze Batch Timestamps for "Smart Stop"
+            batch_dates = []
+            for s in batch_sessions:
+                st = s.get("start_time") or s.get("startTime")
+                if st:
+                    if isinstance(st, int) and st > 1000000000000:
+                        batch_dates.append(datetime.datetime.utcfromtimestamp(st / 1000))
+                    else:
+                        try:
+                            batch_dates.append(datetime.datetime.fromisoformat(st))
+                        except:
+                            pass
+            
+            if not batch_dates:
+                print("[DAL WARNING] Could not parse dates in batch. Skipping safety checks.")
+                # Fallback: Just filter and continue
+            else:
+                earliest_in_batch = min(batch_dates)
+                latest_in_batch = max(batch_dates)
+
+                # CASE A: We are entirely in the future (Newer than target month)
+                if earliest_in_batch >= end_of_target:
+                    print(f"[DAL INFO] Batch is too new ({earliest_in_batch} > {end_of_target}). Scrolling back...")
+                    # Do NOT break. We need to keep fetching to reach our month.
+                
+                # CASE B: We have gone past the target (Older than target month)
+                elif latest_in_batch < start_of_target:
+                    print(f"[DAL INFO] Batch is too old ({latest_in_batch} < {start_of_target}). Data complete. STOP.")
+                    break # <--- SAFETY STOP
+            
+            # 4. Filter and Store Matches
+            for s in batch_sessions:
+                # (Re-parsing just for filtering - minimal overhead)
+                st = s.get("start_time") or s.get("startTime")
+                if st:
+                    if isinstance(st, int): dt = datetime.datetime.utcfromtimestamp(st / 1000)
+                    else: 
+                        try: dt = datetime.datetime.fromisoformat(st)
+                        except: continue
+                    
+                    if dt.year == year and dt.month == month:
+                        sessions.append(s)
+
+            # 5. Pagination Logic
+            if next_offset == "last_page" or not next_offset or next_offset == last_offset:
+                break
+            
+            last_offset = next_offset
+            payload["charging_activity_monthly"]["page_offset"] = next_offset
+
+        # Save to cache
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        cache_data = {"sessions": sessions, "date_retrieved": now.isoformat()}
+        with open(cache_path, "w") as f:
+            json.dump(cache_data, f)
+            
+        # Update memory cache
         with self.lock:
             self.cache[cache_key] = sessions
-            # Cache each session individually by session_id
-            for session in sessions:
-                sid = session.get("session_id") or session.get("sessionId")
-                if sid is not None:
-                    self.cache[f"session_{sid}"] = session
-            self._save_cache()
+            
         return sessions
 
     # Additional methods for fetching session details, status, etc. can be added here

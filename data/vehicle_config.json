@@ -8,10 +8,10 @@
       "trim": "2LT",
       "battery_capacity_kwh": 85,
       "max_charge_rate_kw": 11.5,
-      "paint_color": "Bursting Blue",
-      "paint_color_hex": "#2C5F8D",
-      "display_color": "Blue",
-      "efficiency_mi_per_kwh": 2.38,
+      "paint_color": "Galaxy Gray Metallic",
+      "paint_color_hex": "#595959",
+      "display_color": "Gray",
+      "efficiency_mi_per_kwh": 3.2,
       "characteristics": "Higher power draw, very consistent charging pattern"
       ,
       "valid_periods": [
@@ -26,10 +26,10 @@
       "trim": "P8",
       "battery_capacity_kwh": 78,
       "max_charge_rate_kw": 11.0,
-      "paint_color": "Midnight Blue",
-      "paint_color_hex": "#004B87",
+      "paint_color": "Bursting Blue",
+      "paint_color_hex": "#0D3896",
       "display_color": "Blue",
-      "efficiency_mi_per_kwh": 2.56,
+      "efficiency_mi_per_kwh": 2.4,
       "characteristics": "Lower power draw, more variable charging pattern"
       ,
       "valid_periods": [
